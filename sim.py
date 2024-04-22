@@ -2,7 +2,6 @@ import numpy as np
 import xarray as xr
 import matplotlib as mpl
 from matplotlib import pyplot as plt
-from scipy.stats import lognorm, binom
 import pandas as pd
 import os
 import itertools
@@ -10,7 +9,7 @@ import itertools
 from pymob.utils.store_file import read_config
 from pymob.simulation import SimulationBase
 from pymob.utils.store_file import prepare_casestudy
-from pymob.sim.base import stack_variables
+from pymob.sim.base import stack_variables, unlist_attrs, enlist_attr
 from pymob.utils.config import lambdify_expression, lookup_args
 
 import mod
@@ -18,8 +17,7 @@ import prob
 import data
 import plot
 
-from mod import solver, solve, tktd_rna_3, tktd_guts_minimal
-from data import load_data, query_database_single_substance
+from data import query_database_single_substance
 
 def xarray_indexer(ds, indices: dict, original_index="id"):
     for new_index, value in indices.items():
@@ -38,8 +36,6 @@ def is_iterable(x):
     
 class Simulation(SimulationBase):
     __pymob_version__ = "0.3.0a3"
-    solver = solve
-    model = tktd_rna_3
     mod = mod
     prob = prob
     dat = data
@@ -93,15 +89,6 @@ class Simulation(SimulationBase):
         self.set_fixed_parameters(input=input)
         self.set_y0()
 
-    def load_functions(self):
-        _model = self.config["simulation"].get("model", fallback=None)
-        if _model is not None:
-            self.model = getattr(mod, _model)
-
-        _solver = self.config["simulation"].get("solver", fallback=None)
-        if _solver is not None:
-            self.solver = getattr(mod, _solver)
-
     def set_fixed_parameters(self, input):
         model_params = read_config(input[0])["model"]
         model_params["volume_ratio"] = float(model_params["volume_ratio"])
@@ -152,6 +139,8 @@ class Simulation(SimulationBase):
         # filter by id (treamtment+replicate)
         if ids is not None:
             observations = observations.sel(id=ids)
+        else:
+            ids = []
 
         # include experiment IDs
         if np.all(include_treatments != 999999):
@@ -318,67 +307,6 @@ class Simulation(SimulationBase):
 
         return y0_dataset
 
-    def set_coordinates(self, input):
-        observations = self.observations
-        sample = observations.id.values
-        obs_time = observations.time.values
-        substance = observations.substance.values
-
-        # t = np.unique(np.concatenate([
-        #     np.linspace(obs_time.min(), obs_time.max(), 1000),
-        #         obs_time
-        #     ]))
-        # t.sort()
-        return sample, obs_time, substance
-
-    def run(self):
-        # old API discouraged to use. Rather use Evaluator API
-        y0 = self.model_parameters["y0"]
-        model_params = self.model_parameters["parameters"]
-        seed = None
-        Y = solver(y0, self.coordinates, model_params, seed)
-        return Y
-
-    @staticmethod
-    def flatten_parameter_dict(model_parameter_dict, exclude_params=[]):
-        parameters = model_parameter_dict
-
-        flat_params = {}
-        empty_map = {}
-        for par, value in parameters.items():
-            if par in exclude_params:
-                continue
-            if is_iterable(value):
-                empty_map.update({par: np.full_like(value, fill_value=np.nan)})
-                for i, subvalue in enumerate(value):
-                    subpar = f"{par}___{i}"
-                    flat_params.update({subpar: subvalue})
-
-            else:
-                flat_params.update({par: value})
-
-            if par not in empty_map:
-                empty_map.update({par: np.nan})
-
-
-        def reverse_mapper(parameters):
-            param_dict = empty_map.copy()
-
-            for subpar, value in parameters.items():
-                subpar_list = subpar.split("___")
-
-                if len(subpar_list) > 1:
-                    par, par_index = subpar_list
-                    param_dict[par][int(par_index)] = value
-                elif len(subpar_list) == 1:
-                    par, = subpar_list
-                    param_dict[par] = value
-
-            return param_dict
-        
-        return flat_params, reverse_mapper
-
-
 
     @staticmethod
     def indexer(sim, obs, data_var, idx):
@@ -386,27 +314,6 @@ class Simulation(SimulationBase):
         sim_idx = sim[data_var].values[*idx[data_var]]
         return obs_idx, sim_idx
 
-    def log_likelihood(self, results, sigma_cint, sigma_nrf2):
-        sim = self.results_to_df(results)
-        obs = self.observations
-        eps = 1e-8
-        obs_idx = {k:np.where(~np.isnan(v.values)) for k, v in obs.items()}
-        
-        cint_obs, cint_sim = self.indexer(sim, obs, "cint", obs_idx)
-        nrf2_obs, nrf2_sim = self.indexer(sim, obs, "nrf2", obs_idx)
-        leth_obs, leth_sim = self.indexer(sim, obs, "lethality", obs_idx)
-
-        # compute log likelihoods
-        # lp_cext = lognorm.logpdf(x=obs["cext"], scale=sim["cext"], s=theta["sigma_cext"])
-        lp_cint = lognorm.logpdf(x=cint_obs, scale=cint_sim+eps, s=sigma_cint)
-        lp_nrf2 = lognorm.logpdf(x=nrf2_obs, scale=nrf2_sim, s=sigma_nrf2)
-        lp_leth = binom.logpmf(k=leth_obs, n=obs["nzfe"].values[*obs_idx["lethality"]], p=leth_sim)
-        
-        lp_sum = 0
-        for lp in [lp_cint, lp_nrf2, lp_leth]:
-            lp_sum += lp.sum()
-
-        return "log-likelihood", -lp_sum
 
     def fix_inf(self, results: xr.Dataset):
         for i, d in enumerate(self.data_variables):
@@ -426,29 +333,15 @@ class Simulation(SimulationBase):
         objectives = diff.mean(dim=("id", "time"))
         return (objectives ** 2).mean()
     
-    def multiobjective_average(self, results):
-        diff = (self.scale_results(results) - self.observations_scaled).to_array()
-        objectives = diff.mean(dim=("id", "time"))
-        return objectives ** 2
-    
     def scale_survival_data(self, data_variable):
         obs = self.observations.copy()
         obs[data_variable] = obs[data_variable] / obs["nzfe"]
         return obs
 
     def plot(self, results):
-        # fig = plot.plot_multisubstance(sim=self, results=results)
         results = results.assign_coords({"substance": self.observations.substance})
         results.attrs["substance"] = self.observations.attrs["substance"]
         fig = self.plot_simulation_results(results)
-        # fig.savefig(f"{self.output_path}/simulation_results.png")
-        
-        # obj_names, obj_values = self.objective_function(self.Y)
-
-        # for ax, key, val in zip(fig.axes, obj_names, obj_values):
-        #     ax.text(1, 1, s=f"{key} = {round(val, 5)}", transform=ax.transAxes, ha="right")
-        # fig = plot.plot_func_for_vars(sim=self, results=results, func=plot.timeseries)
-        # fig.savefig(f"{self.output_path}/timeseries.png")
 
     @staticmethod
     def plot_simulation_results(results: xr.Dataset, cmap=None, data_variables=None, substances=None):
@@ -497,7 +390,6 @@ class Simulation(SimulationBase):
 
         return ax
 
-
     def prior_predictive_checks(self):
         fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
         for i, d in enumerate(self.data_variables):
@@ -515,7 +407,6 @@ class Simulation(SimulationBase):
                 if d == "nrf2":
                     ax.set_yscale("log")
         fig.savefig(f"{self.output_path}/ppc.png")
-
 
     def experiment_info(self):
         experiments = self.dat.experiment_table("data/tox.db", self.observations)
@@ -556,7 +447,6 @@ class Simulation(SimulationBase):
 
     def pyabc_posterior_predictions(self):
         plot.pretty_posterior_plot_multisubstance(self)
-        # plot.pyabc_predictions(self)
 
     @staticmethod
     def get_ids(dataset, indices):
@@ -571,8 +461,6 @@ class Simulation(SimulationBase):
             obs_ids = np.array([], ndmin=1)
 
         return obs_ids
-
-        # get all observations from the same experiment
 
     def plot_experiment(
         self, 
@@ -783,6 +671,8 @@ class SingleSubstanceSim(Simulation):
         self.load_functions()
 
         observations = self.load_observations()
+        unlist_attrs(observations).to_netcdf(f"{self.data_path}/dataset.nc")
+        observations = enlist_attr(observations, "substance")
         observations, indices = self.reshape_observations(observations)
         observations = self.postprocess_observations(observations)
         self.observations = observations
@@ -930,48 +820,27 @@ class SingleSubstanceSim2(SingleSubstanceSim):
         self.model_parameters["parameters"] = self.fixed_model_parameters
 
 if __name__ == "__main__":
-    config = prepare_casestudy(("reversible_damage", "rna_pulse_3_6c_substance_independent_rna_protein_module"), "settings.cfg")
+    config = prepare_casestudy((
+        "tktd-rna-pulse", 
+        "rna_pulse_3_6c_substance_independent_rna_protein_module"), 
+        "settings.cfg"
+    )
     
     sim = SingleSubstanceSim2(config=config)
-    sim.plot_experiments(plot_individual=False)
-    # sim.plot_cext_cint_relation(sim.observations)
 
-    # sim.experiment_info()
-    # evaluator = sim.dispatch(theta=sim.model_parameter_dict)
-    # evaluator()
-    # evaluator.results
-
-    # print(make_jaxpr(evaluator)())
-
-    
-    # sim.benchmark(n=100)
+    # run a single simulation
+    evaluator = sim.dispatch(theta=sim.model_parameter_dict)
+    evaluator()
+    evaluator.results
 
     sim.set_inferer(backend="numpyro")
-    # sim.config.set("inference.numpyro", "kernel", "map")
-    # sim.config.set("inference.numpyro", "svi_learning_rate", "0.001")
-    # sim.config.set("inference.numpyro", "svi_iterations", "500")
 
-    # sim.prior_predictive_checks()
-    # sim.inferer.run()
-    # sim.inferer.store_results()
+    # run inference
+    sim.prior_predictive_checks()
+    sim.inferer.run()
+    sim.inferer.store_results()
+
+    # plot inference results
     sim.inferer.load_results()
-    # sim.posterior_predictive_checks()
-    plot.pretty_posterior_plot_multisubstance(sim)
+    sim.posterior_predictive_checks()
     sim.inferer.plot()
-    # sim.inferer.combine_chains(chain_location="chains_nuts", drop_extra_vars=["lethality", "D"])
-
-
-    # data_vars = ["cext", "cint", "nrf2", "lethality"]
-    # fig, axes = plt.subplots(len(data_vars), 3, figsize=(8,12), sharex=True)
-    # for i, v in enumerate(data_vars):
-    #     for j, s in enumerate(sim.observations.attrs["substance"]):
-    #         ids = sim.observations.swap_dims(id="substance").sel(substance=s).id.values
-    #         sim.inferer.idata.posterior_predictive[v]\
-    #             .sel(id=ids)\
-    #             .mean(("chain", "draw"))\
-    #             .plot.line(x="time", ax=axes[i,j])
-    #         sim.observations[v]\
-    #             .sel(id=ids)\
-    #             .plot.scatter(x="time", ax=axes[i,j])
-            
-    # fig.savefig(f"{sim.output_path}/complete_predictions.png")
