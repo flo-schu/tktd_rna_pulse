@@ -39,6 +39,7 @@ class Simulation(SimulationBase):
     mod = mod
     prob = prob
     dat = data
+    mplot = plot
 
     @staticmethod
     def parameterize(free_parameters, model_parameters):
@@ -343,58 +344,12 @@ class Simulation(SimulationBase):
         results.attrs["substance"] = self.observations.attrs["substance"]
         fig = self.plot_simulation_results(results)
 
-    @staticmethod
-    def plot_simulation_results(results: xr.Dataset, cmap=None, data_variables=None, substances=None):
-        if data_variables is None:
-            data_variables = list(results.data_vars.keys())
-
-        if cmap is None:
-            cmap = mpl.colormaps["cool"]
-        
-        if substances is None:
-            substances = results.attrs["substance"]
-        
-        nv = len(data_variables)
-        ns = len(substances) 
-        fig, axes = plt.subplots(nv, ns, figsize=(2 + ns*3, nv*1 + 2), 
-                                 sharex=True, squeeze=False)
-        
-        for i, v in enumerate(data_variables):
-            for j, s in enumerate(substances):
-                ax = axes[i, j]
-                substance_res = results.where(results.substance==s, drop=True)
-                C = np.round(substance_res.cext_nom.values, 1)
-                norm = mpl.colors.Normalize(vmin=C.min(), vmax=C.max())
-                if i == len(data_variables) - 1: ax.set_xlabel("Time [h]")
-                if i == 0: ax.set_title(s.capitalize())
-                for ii in substance_res.id:
-                    data = substance_res.sel(id=ii)
-                    ax.plot(data.time, data[v], color=cmap(norm(float(data.cext_nom))))
-                    if j == 0: ax.set_ylabel(v.capitalize()) 
-
-        return fig
-
-    def plot_variable_substance_combi(self, ax, data_variable, substance, prediction="prior_predictions"):
-        exposed = self.observations.cext_nom.sel(substance=substance) > 0
-        ids_subset = self.observations.id[exposed]
-                
-        predictions_ =  getattr(self.inferer, f"plot_{prediction}")
-        ax = predictions_(
-            x_dim="time",
-            data_variable=data_variable, 
-            ax=ax,
-            n=20,
-            seed=1,
-            subset={"id": ids_subset, "substance": substance}
-        )
-
-        return ax
-
     def prior_predictive_checks(self):
         fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
         for i, d in enumerate(self.data_variables):
             for j, s in enumerate(np.unique(self.observations.substance.values)):
-                ax = self.plot_variable_substance_combi(
+                ax = self.mplot.plot_variable_substance_combi(
+                    self,
                     data_variable=d,
                     substance=s,
                     prediction="prior_predictions",
@@ -432,7 +387,8 @@ class Simulation(SimulationBase):
         fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
         for i, d in enumerate(self.data_variables):
             for j, s in enumerate(np.unique(self.observations.substance.values)):
-                ax = self.plot_variable_substance_combi(
+                ax = self.mplot.plot_variable_substance_combi(
+                    self,
                     data_variable=d,
                     substance=s,
                     prediction="posterior_predictions",
@@ -446,7 +402,7 @@ class Simulation(SimulationBase):
         self.coordinates["time"] = self.observations.time.values
 
     def pyabc_posterior_predictions(self):
-        plot.pretty_posterior_plot_multisubstance(self)
+        self.mplot.pretty_posterior_plot_multisubstance(self)
 
     @staticmethod
     def get_ids(dataset, indices):
@@ -462,207 +418,6 @@ class Simulation(SimulationBase):
 
         return obs_ids
 
-    def plot_experiment(
-        self, 
-        experiment_id, 
-        substance, 
-        data_var, 
-        ax=None, 
-        norm=None,
-        cmap=mpl.colormaps["cool"],
-    ):
-        # get metadata
-        experiments = self.dat.experiment_table("data/tox.db", self.observations)
-        meta = experiments.query(f"id=={experiment_id}").iloc[0]
-        
-        if ax is None:
-            fig, ax = plt.subplots(1,1)
-        
-        indices = {
-            "substance": substance, 
-            "experiment_id": experiment_id,
-        }
-
-        try:
-            data = xarray_indexer(
-                ds=self.observations, 
-                indices=indices, 
-                original_index="id"
-            )[data_var]
-        except KeyError:
-            ax.text(0.5, 0.5, "No\ndata", transform=ax.transAxes, 
-                    ha="center", va="center")
-            return ax, meta, np.array([], ndmin=0), norm
-
-
-        # get all observations from the same experiment
-        obs_ids = np.array(data.id.values, ndmin=1)
-        
-        # get a list of symbols for different concentrations                    
-        marker = iter(list(mpl.lines.Line2D.markers.keys())[slice(2,-1)])
-
-        if norm is None:
-            C = np.round(data.cext_nom.values, 1)
-            norm = mpl.colors.Normalize(vmin=C.min(), vmax=C.max())
-
-        for oid in obs_ids:
-            o = data.sel(id=oid)
-            o = o.dropna(dim="time")
-
-            d = str(meta["date"]).split(" ")[0]
-            ep = str(meta["experimentator"])
-            n = meta["name"].capitalize()
-
-            # s = str(o.substance.values).capitalize()
-            hpf = float(o.hpf.values)
-            c = round(float(o.cext_nom.values), 1)
-
-            x = o.time
-        
-            col = cmap(norm(c))
-            lab = f"$C_{{e,0}} = {c}$ ($ID_t = {int(o.treatment_id)}$)"
-            if data_var == "lethality" or data_var == "survival":
-                y = o.values / o.nzfe
-                ax.set_ylim(-0.05,1.05)
-                ax.set_ylabel(data_var.capitalize())
-
-            elif data_var == "cext":
-                y = o.values
-                ax.set_ylabel(f"$C_{{e}}$ [µmol/l]")
-
-            elif data_var == "cint":
-                y = o.values
-                ax.set_ylabel(f"$C_{{i}}$ [µmol/l]")
-
-            elif data_var == "nrf2":
-                y = o.values
-                ax.set_ylabel(f"NRF2 [fc]")
-
-            ax.plot(x, y, lw=.3, marker=next(marker), color=col, label=lab)
-            ax.spines[["right", "top"]].set_visible(False)
-            ax.set_title(f"{n}: ({ep}, {d}), {hpf} hpf, id={experiment_id}")
-            ax.set_xlim(-5,120)
-            ax.set_xlabel("time [h]")
-            ax.legend(title=f"{substance.capitalize()} [µmol/L]")
-
-        return ax, meta, obs_ids, norm
-
-    def plot_cext_cint_relation(self, observations):
-        for s in ["diuron", "diclofenac", "naproxen"]:
-            cext_nom = observations.cext.where(~observations.cext.isnull(), drop=True).cext_nom
-            cext_meas = observations.cext.where(~observations.cext.isnull(), drop=True).max("time")
-            cint_meas = observations.cint.where(~observations.cext.isnull(), drop=True).max("time")
-
-            fig, ax = plt.subplots(1,1)
-            ax.set_title(s.capitalize())
-            ax.scatter(
-                cext_nom.where(cext_nom.substance==s, drop=True), 
-                cint_meas.where(cint_meas.substance==s, drop=True), 
-                alpha=.75, color="tab:blue", label=f"$C_{{e,nom}}$ vs $C_{{i,max}}$")
-            ax.scatter(
-                cext_meas.where(cext_meas.substance==s, drop=True), 
-                cint_meas.where(cint_meas.substance==s, drop=True), 
-                alpha=.75, color="tab:orange",
-                label=f"$C_{{e,max}}$ vs $C_{{i,max}}$")
-            
-            eids = cint_meas.where(cint_meas.substance==s, drop=True).experiment_id
-            for i, eid in enumerate(eids):
-                ax.text(
-                    cext_meas.where(cext_meas.substance==s, drop=True)[i],
-                    cint_meas.where(cint_meas.substance==s, drop=True)[i],
-                    int(eid)
-                )
-            ax.set_xlabel(f"$C_e$")
-            ax.set_ylabel(f"$C_i$")
-            ax.legend()
-
-            fig.savefig(f"case_studies/reversible_damage/results/data/rel_ceci_{s}.png")
-            plt.close()
-
-    def plot_experiments(self, plot_individual=True):
-        obs = self.observations.swap_dims(id="experiment_id")
-        experiments = self.dat.experiment_table("data/tox.db", self.observations)
-        cmap = mpl.colormaps["cool"]
-
-        # first grouping is by endpoint, because in endpoint experiments,
-        # multiple variables may be recorded
-        for endpoint, group in experiments.groupby("name"):
-            experiment_ids = group.id.values
-            
-            # gather all observations in one endpoint
-            endpoint_ids = np.concatenate(
-                [np.array(obs.sel(experiment_id=eid).id.values, ndmin=1) 
-                 for eid in experiment_ids]
-            )
-            endpoint_obs = self.observations.sel(id=endpoint_ids)
-            
-            # get all substances in the endpoint data
-            esubs = np.unique(endpoint_obs.substance)
-            # n_per_substance = np.concatenate([np.unique(xarray_indexer(endpoint_obs, {"experiment_id": ei}).substance_index) for ei in experiment_ids])
-            # np.bincount(n_per_substance)
-
-            # get all data_variables with observations in the endpoint data
-            evars = [k for k, ov in endpoint_obs.data_vars.items() if (~ov.isnull()).sum() > 0]
-
-            # set up the figure with all panels
-            rows = list(itertools.product(esubs, evars))
-            ncols = len(experiment_ids)
-            nrows = len(rows)
-            
-            if not plot_individual:
-                figsize = (5 * ncols, 5 * nrows)
-                fig, axes = plt.subplots(
-                    nrows, ncols, figsize=figsize, 
-                    sharex=True, sharey="row", squeeze=False
-                )
-            else:
-                axes = np.full((nrows, ncols), None)
-
-            # iterate over substances 
-            for i, (s, v) in enumerate(rows):
-
-                # extract data from the endpoint-substance combi
-                data = xarray_indexer(endpoint_obs, {"substance": s})
-                data = self.observations[v].sel(id=data.id.values)
-                
-                # create a concentration normalizer
-                C = np.round(data.cext_nom.values, 1)
-                norm = mpl.colors.Normalize(vmin=C.min(), vmax=C.max())
-                
-                # iterate over experiments
-                for j, eid in enumerate(experiment_ids):
-                    
-                    # get the correct axis (or create a new figure)
-                    ax = axes[i, j]
-                    
-                    ax, meta, _, _ = self.plot_experiment(
-                        experiment_id=eid, 
-                        substance=s, 
-                        data_var=v, 
-                        ax=ax, 
-                        norm=None if plot_individual else norm,
-                        cmap=cmap,
-                    )
-
-                    if not ax.has_data() and plot_individual:
-                        plt.close()
-                        continue
-
-                    folder = f"case_studies/reversible_damage/results/data/{endpoint}".lower()
-                    os.makedirs(folder, exist_ok=True)
-                    
-                    if plot_individual:
-                        ep = str(meta['experimentator'])
-                        d = str(meta["date"]).split(" ")[0].replace('-', '')
-                        file = f"{v}_{eid}_{s}_{ep}_{d}".lower()
-                        fig = ax.figure
-                        fig.savefig(f"{folder}/{file}.png")
-                        plt.close()
-
-            if not plot_individual:
-                fig.subplots_adjust(0.02, 0.02, 0.95, 0.95, 0.1, 0.1)
-                fig.savefig(f"{folder}_experiments.png")
-                plt.close()
 
 
 class SingleSubstanceSim(Simulation):
@@ -777,47 +532,11 @@ class SingleSubstanceSim(Simulation):
         # substance = self.observations.substance.values
         return sample, obs_time
 
-    def plot_variable_substance_combi(self, ax, data_variable, substance, prediction="prior_predictions"):
-        exposed = self.observations\
-            .swap_dims(id="substance")\
-            .sel(substance=substance)
-        ids_subset = exposed.id.values
-
-        if prediction == "posterior_predictions":
-            preds = self.inferer.posterior_predictions(
-                n=self.inferer.n_predictions, 
-                seed=self.seed
-            )
-            mode = "mean+hdi"
-
-        elif prediction == "prior_predictions":
-            preds = self.inferer.prior_predictions(
-                n=50, # this will plot 50 x all experiments. This is sufficient to get an idea
-                seed=self.seed
-            ).prior_predictive
-            mode = "draws"
-        
-        if data_variable == "survival" or data_variable == "lethality":
-            obs = self.scale_survival_data(data_variable)
-        else:
-            obs = self.observations
-
-        ax = self.inferer.plot_predictions(
-            observations=obs,
-            predictions=preds,
-            data_variable=data_variable, 
-            x_dim="time",
-            ax=ax,
-            subset={"id": ids_subset},
-            mode=mode
-        )
-        
-
-        return ax
 
 class SingleSubstanceSim2(SingleSubstanceSim):
     def set_fixed_parameters(self, input):
         self.model_parameters["parameters"] = self.fixed_model_parameters
+
 
 if __name__ == "__main__":
     config = prepare_casestudy((
@@ -827,6 +546,8 @@ if __name__ == "__main__":
     )
     
     sim = SingleSubstanceSim2(config=config)
+
+    sim.mplot.plot_experiments(sim)
 
     # run a single simulation
     evaluator = sim.dispatch(theta=sim.model_parameter_dict)
