@@ -73,6 +73,27 @@ def halfnormal_prior(name, loc, scale, normal_base=False):
     return prior
 
 
+def cint_max_preprocessing(obs, masks):
+    ci_max = []
+    # calculate the maximum internal concentration based on the substance index
+    for i in range(int(max(obs["substance_index"])) + 1):
+        ci_s = obs["cint"][obs["substance_index"] == i]
+        m = jnp.max(ci_s[~jnp.isnan(ci_s)])
+        ci_max.append(m)
+
+    # alternatively I could pass simply a vector of the known internal maximum 
+    # concentrations
+    # ci_max = np.array([1757.0, 168.1, 6364.8])
+
+    print(f"C_{{i, max}}: {[round(float(v), 1) for v in ci_max]}")
+
+    return {
+        "obs": obs,
+        "masks": masks,
+        "ci_max": jnp.array(ci_max),
+    }
+
+
 # RNA pulse model 3.6c 
 # ====================
 # removes b_base parameter
