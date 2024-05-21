@@ -2,6 +2,7 @@ import os
 import itertools
 
 import numpy as np
+import xarray as xr
 import matplotlib as mpl
 from matplotlib import cm
 from matplotlib import pyplot as plt
