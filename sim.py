@@ -525,8 +525,6 @@ class SingleSubstanceSim(Simulation):
             reduce_dim: reduce_dim_idx
         }
 
-        stacked_obs.attrs["excluded_experiments"] = stacked_obs.attrs["excluded_experiments"].tolist()
-
         return stacked_obs, indices
 
     def set_y0(self):
