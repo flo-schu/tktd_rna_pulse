@@ -33,7 +33,7 @@ def cice_relation(sim: SimulationBase):
     fig.savefig(f"{sim.output_path}/ci_ce_relationship.png")
     
 
-def pretty_posterior_plot_multisubstance(sim):
+def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
     print("PRETTY PLOT: starting...")
 
     substances = sim.observations.attrs["substance"]
@@ -44,6 +44,7 @@ def pretty_posterior_plot_multisubstance(sim):
     obs_raw = sim.observations
     obs_raw.survival.values = (obs_raw.survival / obs_raw.nzfe).values
 
+    figs = []
     for s in substances:
         susbtance_mask = sim.observations.substance == s
         obs = obs_raw.where(susbtance_mask, drop=True)
@@ -171,10 +172,18 @@ def pretty_posterior_plot_multisubstance(sim):
         fig.text(x=0.5, y=0.02, s="Time [hpf]")
         fig.subplots_adjust(left=0.08, right=0.99, bottom=0.08, top=0.95, wspace=0.1, hspace=0.1)
 
-        fig.savefig(f"{sim.output_path}/combined_pps_figure_{s}.png")
-        plt.close()
+        figs.append(fig)
+        if save:
+            fig.savefig(f"{sim.output_path}/combined_pps_figure_{s}.png")
+
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
     sim.coordinates["time"] = old_time
+
+    return figs
 
 
 def plot_experiments(self, plot_individual=True):
