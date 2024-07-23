@@ -29,6 +29,7 @@ and download again.
 datalad clone git@gin.g-node.org:/flo-schu/tktd_nrf2_zfe__data.git data
 datalad clone git@gin.g-node.org:/flo-schu/tktd_rna_pulse__results.git results
 datalad unlock case_studies/tktd_rna_pulse/results
+cd data && git annex get
 ```
 
 if this is not possible create a new dataset with `datalad create -c text2git results` (see section below)

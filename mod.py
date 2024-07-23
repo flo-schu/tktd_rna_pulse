@@ -99,7 +99,7 @@ def odesolve(model, y0, time, args):
     return list(sol.ys)
 
 
-def calculate_psurv2(results, t, z, kk, h_b):
+def calculate_psurv2(results, t, interpolation, z, kk, h_b):
     # calculate survival 
     p_surv = survival_jax(t, results["nrf2"], z, kk, h_b)
     results["survival"] = p_surv

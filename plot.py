@@ -322,7 +322,7 @@ def plot_experiment(
     cmap=mpl.colormaps["cool"],
 ):
     # get metadata
-    experiments = self.dat.experiment_table("data/tox.db", self.observations)
+    experiments = self.dat.experiment_table(f"{self.data_path}/tox.db", self.observations)
     meta = experiments.query(f"id=={experiment_id}").iloc[0]
     
     if ax is None:

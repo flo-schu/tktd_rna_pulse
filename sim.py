@@ -17,8 +17,6 @@ import prob
 import data
 import plot
 
-from data import query_database_single_substance
-
 def xarray_indexer(ds, indices: dict, original_index="id"):
     for new_index, value in indices.items():
         ds_swapped = ds.swap_dims({original_index: new_index})
@@ -35,25 +33,11 @@ def is_iterable(x):
         return False
     
 class Simulation(SimulationBase):
-    __pymob_version__ = "0.3.0a3"
+    __pymob_version__ = "0.4.1"
     mod = mod
     prob = prob
     dat = data
     mplot = plot
-
-    @staticmethod
-    def parameterize(free_parameters, model_parameters):
-        
-        # substance = self.config.get("simulation", "substance")
-        y0 = model_parameters["y0"]
-        parameters = model_parameters["parameters"] 
-        parameters.update(free_parameters)
-
-        # here I could use a prior, which varies cext_0_nom by a standard
-        # deviation
-
-        params = {"y0": y0, "parameters": parameters}
-        return params
 
     def generate_artificial_data(self, nan_frac=0.2):  
         # create artificial data from Evaluator      
@@ -82,52 +66,48 @@ class Simulation(SimulationBase):
         return y
 
     def initialize(self, input):
-        self.load_functions()
         observations = self.load_observations()
         observations = self.reshape_observations(observations)
         observations = self.postprocess_observations(observations)
         self.observations = observations
-        self.set_fixed_parameters(input=input)
         self.set_y0()
-
-    def set_fixed_parameters(self, input):
-        model_params = read_config(input[0])["model"]
-        model_params["volume_ratio"] = float(model_params["volume_ratio"])
-        self.model_parameters["parameters"] = model_params
 
     def load_observations(self):
         # get options from config
-        hpf = self.config.getfloat("simulation", "hpf")
-        substance = self.config.getlist("simulation", "substance")
+        hpf = float(self.config.simulation.hpf) # type: ignore
+        substance = self.config.simulation.substance.split(" ") # type: ignore
         if isinstance(substance, str):
             substance = [substance]
-        ids = self.config.getlist("simulation", "ids", fallback=None)
-        exclude_experiments = np.array(self.config.getlist(
-            "simulation", "exclude_experiments", fallback=[]
-        ), dtype=int)
-        include_experiments = np.array(self.config.getlist(
-            "simulation", "include_experiments", fallback=999999
-        ), dtype=int)
-        exclude_treatments = np.array(self.config.getlist(
-            "simulation", "exclude_treatments", fallback=[]
-        ), dtype=int)
-        include_treatments = np.array(self.config.getlist(
-            "simulation", "include_treatments", fallback=999999
-        ), dtype=int)
+        ids = self.config.simulation.model_extra.get("ids", None) # type: ignore
+        exclude_experiments = np.array(
+            self.config.simulation.model_extra.get("exclude_experiments", "999999").split(" "), # type: ignore
+            dtype=int
+        )
+        include_experiments = np.array(
+            self.config.simulation.model_extra.get("include_experiments", "999999").split(" "), # type: ignore
+            dtype=int
+        )
+        exclude_treatments = np.array(
+            self.config.simulation.model_extra.get("exclude_treatments", "999999").split(" "), # type: ignore
+            dtype=int
+        )
+        include_treatments = np.array(
+            self.config.simulation.model_extra.get("include_treatments", "999999").split(" "), # type: ignore
+            dtype=int
+        )
         ids = [ids] if isinstance(ids, str) else ids
 
-        observations = []
+        observations = [] # type: ignore
         for sub in substance:
             srange = f"substance_range_{sub}"
             
-            substance_range = self.config.getlistfloat(
-                "simulation", srange, 
-                fallback=[0, np.inf]
-            )
-            
+            substance_range = self.config.simulation.model_extra.get( # type: ignore
+                srange, [0, np.inf]
+            ) 
+
             # execute query and return xarray
-            obs = query_database_single_substance(
-                database="data/tox.db",
+            obs = data.query_database_single_substance( # type: ignore
+                database=f"{self.data_path}/tox.db",
                 hpf=hpf,
                 substance=sub, 
                 substance_range=substance_range
@@ -135,7 +115,7 @@ class Simulation(SimulationBase):
 
             observations.append(obs)
 
-        observations: xr.Dataset = xr.concat(observations, dim="id")
+        observations: xr.Dataset = xr.concat(observations, dim="id") # type: ignore
 
         # filter by id (treamtment+replicate)
         if ids is not None:
@@ -274,40 +254,6 @@ class Simulation(SimulationBase):
         y0["nrf2"].values = np.zeros(shape=y0["nrf2"].shape)
         
         self.model_parameters["y0"] = y0
-        
-    def parse_y0(self, y0=None):
-        if y0 is None:
-            y0 = self.observations.isel(time=0).copy()
-
-        # parse dims and coords
-        y0_dims = {k:v for k, v in self.observations.dims.items() if k != "time"}
-        y0_coords = {k:v for k, v in self.observations.coords.items() if k in y0_dims}
-        
-        y0_list = self.config["simulation"].getlist("y0", fallback=[])
-        
-        y0_dataset = xr.Dataset()
-        for y0_expression in y0_list:
-            key, expr = y0_expression.split("=")
-            
-            func, args = lambdify_expression(expr)
-
-            kwargs = lookup_args(args, y0)
-
-            value = func(**kwargs)
-
-            if not isinstance(value, xr.DataArray):
-                value.shape != tuple(y0_dims.values())
-                value = np.broadcast_to(value, tuple(y0_dims.values()))
-                value = xr.DataArray(value, coords=y0_coords)
-
-            else:
-                value = xr.DataArray(value.values, coords=y0_coords)
-
-            y0_dataset[key] = value
-
-
-        return y0_dataset
-
 
     @staticmethod
     def indexer(sim, obs, data_var, idx):
@@ -315,20 +261,8 @@ class Simulation(SimulationBase):
         sim_idx = sim[data_var].values[*idx[data_var]]
         return obs_idx, sim_idx
 
-
-    def fix_inf(self, results: xr.Dataset):
-        for i, d in enumerate(self.data_variables):
-            r = results[d].values
-            if np.sum(np.isinf(r)) > 0:
-                print("Infinity in results")
-
-            r = np.where(np.isinf(r), self.scaler.data_max_[i] * 1e3, r)
-            results[d].values = r
-        return results
-
-
     def objective_average(self, results):
-        sim = self.scale_(self.fix_inf(self.results_to_df(results)))
+        sim = self.scale_(self.results_to_df(results))
         obs = self.observations_scaled
         diff = (sim - obs).to_array()
         objectives = diff.mean(dim=("id", "time"))
@@ -342,7 +276,7 @@ class Simulation(SimulationBase):
     def plot(self, results):
         results = results.assign_coords({"substance": self.observations.substance})
         results.attrs["substance"] = self.observations.attrs["substance"]
-        fig = self.plot_simulation_results(results)
+        fig = self._plot.plot_simulation_results(results)
 
     def prior_predictive_checks(self):
         fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
@@ -364,8 +298,8 @@ class Simulation(SimulationBase):
         fig.savefig(f"{self.output_path}/ppc.png")
 
     def experiment_info(self):
-        experiments = self.dat.experiment_table("data/tox.db", self.observations)
-        treatments = self.dat.treatment_table("data/tox.db", self.observations)
+        experiments = self._data.experiment_table("data/tox.db", self.observations)
+        treatments = self._data.treatment_table("data/tox.db", self.observations)
 
         datasets = pd.merge(
             treatments, experiments, 
@@ -421,16 +355,14 @@ class Simulation(SimulationBase):
 
 
 class SingleSubstanceSim(Simulation):
-    __pymob_version__ = "0.3.0a5"
+    __pymob_version__ = "0.4.1"
     def initialize(self, input):
-        self.load_functions()
 
         observations = self.load_observations()
         observations, indices = self.reshape_observations(observations)
 
         # export observations
         obs_export = unlist_attrs(observations)
-        os.makedirs(self.data_path, exist_ok=True)
         obs_export.to_dataframe().reset_index()[[
             "id", "treatment_id", "experiment_id", "nzfe", "hpf", "substance", 
             "cext_nom", "time", "cext", "cint", "nrf2", 
@@ -439,16 +371,10 @@ class SingleSubstanceSim(Simulation):
         observations = enlist_attr(observations, "substance")
         
         observations = self.postprocess_observations(observations)
-        self.observations = observations
+        self.observations = observations  #type:ignore
         self.indices = indices
 
-        self.set_fixed_parameters(input=input)
         self.set_y0()
-
-    def set_fixed_parameters(self, input):
-        model_params = read_config(input[0])["model"]
-        model_params["volume_ratio"] = np.array(model_params["volume_ratio"], dtype=float)
-        self.model_parameters["parameters"] = model_params
 
     def reshape_observations(self, observations):
         # TODO: It seems to me that much of this can also be abstracted
@@ -483,7 +409,7 @@ class SingleSubstanceSim(Simulation):
             if not (non_zero_count == 1).all():
                 raise ValueError(f"Invalid '{reduce_dim}' dimension. It should have exactly one non-zero value.")
             
-            return np.where(array != 0)[axis]
+            return np.where(array != 0)[axis]  #type: ignore
 
 
         # Applying the reduction function using groupby and reduce
@@ -500,8 +426,7 @@ class SingleSubstanceSim(Simulation):
         
         reduce_dim_id_mapping = stacked_obs[reduce_dim]\
             .isel({reduce_dim: reduce_dim_idx})\
-            .drop(reduce_dim)\
-            .rename(f"{reduce_dim}_id_mapping")
+            .drop(reduce_dim).rename(f"{reduce_dim}_id_mapping")  # type: ignore
         
         reduce_dim_idx = reduce_dim_idx.assign_coords({
             f"{reduce_dim}": reduce_dim_id_mapping
@@ -531,7 +456,7 @@ class SingleSubstanceSim(Simulation):
         super().set_y0()
 
         y0 = self.model_parameters["y0"]
-        y0 = self.parse_y0(y0=y0)
+        y0 = self.parse_input(input="y0", reference_data=y0, drop_dims=["time"])
 
         self.model_parameters["y0"] = y0
 
@@ -568,9 +493,9 @@ if __name__ == "__main__":
     # run inference
     sim.prior_predictive_checks()
     sim.inferer.run()
-    sim.inferer.store_results()
+    sim.inferer.store_results()  # type: ignore
 
     # plot inference results
     sim.inferer.load_results()
     sim.posterior_predictive_checks()
-    sim.inferer.plot()
+    sim.inferer.plot()  # type: ignore
