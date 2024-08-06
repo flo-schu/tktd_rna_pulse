@@ -34,10 +34,6 @@ def is_iterable(x):
     
 class Simulation(SimulationBase):
     __pymob_version__ = "0.4.1"
-    mod = mod
-    prob = prob
-    dat = data
-    mplot = plot
 
     def generate_artificial_data(self, nan_frac=0.2):  
         # create artificial data from Evaluator      
@@ -282,7 +278,7 @@ class Simulation(SimulationBase):
         fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
         for i, d in enumerate(self.data_variables):
             for j, s in enumerate(np.unique(self.observations.substance.values)):
-                ax = self.mplot.plot_variable_substance_combi(
+                ax = self._plot.plot_variable_substance_combi(
                     self,
                     data_variable=d,
                     substance=s,
@@ -321,7 +317,7 @@ class Simulation(SimulationBase):
         fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
         for i, d in enumerate(self.data_variables):
             for j, s in enumerate(np.unique(self.observations.substance.values)):
-                ax = self.mplot.plot_variable_substance_combi(
+                ax = self._plot.plot_variable_substance_combi(
                     self,
                     data_variable=d,
                     substance=s,
@@ -336,7 +332,7 @@ class Simulation(SimulationBase):
         self.coordinates["time"] = self.observations.time.values
 
     def pyabc_posterior_predictions(self):
-        self.mplot.pretty_posterior_plot_multisubstance(self)
+        self._plot.pretty_posterior_plot_multisubstance(self)
 
     @staticmethod
     def get_ids(dataset, indices):
@@ -469,7 +465,7 @@ class SingleSubstanceSim(Simulation):
 
 class SingleSubstanceSim2(SingleSubstanceSim):
     def set_fixed_parameters(self, input):
-        self.model_parameters["parameters"] = self.fixed_model_parameters
+        self.model_parameters["parameters"] = self.config.model_parameters.fixed_value_dict
 
 
 if __name__ == "__main__":
@@ -481,7 +477,7 @@ if __name__ == "__main__":
     
     sim = SingleSubstanceSim2(config=config)
 
-    sim.mplot.plot_experiments(sim)
+    sim._plot.plot_experiments(sim)
 
     # run a single simulation
     evaluator = sim.dispatch(theta=sim.model_parameter_dict)
