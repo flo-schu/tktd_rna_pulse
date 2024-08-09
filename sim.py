@@ -49,7 +49,10 @@ class Simulation(SimulationBase):
         y["cext"].values = rng.lognormal(mean=np.log(y["cext"].values + EPS), sigma=0.1)
         y["cint"].values = rng.lognormal(mean=np.log(y["cint"].values + EPS), sigma=0.1)
         y["nrf2"].values = rng.lognormal(mean=np.log(y["nrf2"].values + EPS), sigma=0.1)
-        y["lethality"].values = rng.binomial(n=nzfe, p=y["lethality"].values)
+        
+        # binomial error model
+        nzfe_ = np.broadcast_to(nzfe.values.reshape((-1, 1)), y["lethality"].values.shape)
+        y["lethality"].values = rng.binomial(n=nzfe_, p=y["lethality"].values)
 
         # add missing data
         for i, (k, val) in enumerate(y.items()):
@@ -58,7 +61,7 @@ class Simulation(SimulationBase):
             y.update({k: val})
 
         # this is added last so that NZFE does not contain missing data
-        y["nzfe"] = nzfe
+        y = y.assign_coords({"nzfe": nzfe})
         return y
 
     def initialize(self, input):
