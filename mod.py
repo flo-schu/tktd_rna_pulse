@@ -15,7 +15,7 @@ from pymob.sim.solvetools import mappar
 
 def simplified_ode_solver(model, post_processing, parameters, coordinates, indices, data_variables, n_ode_states, seed=None):
     coords = coordinates
-    y0_arr = parameters["y0"].sel(id=coords["id"])
+    y0_arr = parameters["y0"]
     params = parameters["parameters"]
     time = tuple(coords["time"])
 
