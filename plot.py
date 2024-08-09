@@ -438,7 +438,7 @@ def plot_simulation_results(results: xr.Dataset, cmap=None, data_variables=None,
         cmap = mpl.colormaps["cool"]
     
     if substances is None:
-        substances = results.attrs["substance"]
+        substances = np.unique(results["substance"])
     
     nv = len(data_variables)
     ns = len(substances) 
