@@ -194,39 +194,7 @@ class Simulation(SimulationBase):
         # after this assertion, missing nzfe values can safely be replaced
         # with a default value, whose only purpose is to make the likelihood computation
         # work and should have no effect on inference
-        nzfe = np.where(np.isnan(nzfe), 9, nzfe)
-        n = len(observations["id"])
-        nt = len(observations["time"])
-        nzfe = np.array(np.broadcast_to(nzfe, (nt, n)).T).astype(int)
-        observations["nzfe"] = (("id", "time"), nzfe)
-
-        # calculate survival from lethality
-        survival = observations["nzfe"] - observations["lethality"]
-        observations["survival"] = survival
-        
-        # survival data looks fine
-        # fig, axes = plt.subplots(2,3)
-        # for s, (axt, axl) in zip(observations.attrs["substance"], axes.T):
-        #     obs = observations.where(observations.substance == s, drop=True)
-        #     [axt.plot(obs.time, obs.survival.sel(id=i), marker="o") for i in obs.id]
-        #     [axl.plot(obs.time, obs.lethality.sel(id=i), marker="o") for i in obs.id]
-
-
-        # fill nan values forward in time with the last observation 
-        # until the next observation. Afterwards leading nans are replaced with 
-        # nzfe(t_0) (no lethality observed before the first observation)
-        nsurv = survival.ffill(dim="time").fillna(observations.nzfe.isel(time=0))
-        # just make sure survival is 1 at the beginning of all experiments
-        np.testing.assert_allclose(nsurv.isel(time=0) - observations["nzfe"].isel(time=0), 0)
-        
-        # create a convenience observation survivors before t, which gives the
-        # number of living organisms at the end of time interval t-1
-        # this is used for calculating conditional survival
-        observations = observations.assign_coords({
-            "survivors_before_t": (("id", "time"), np.column_stack([
-                nsurv.isel(time=0).values, 
-                nsurv.isel(time=list(range(0, len(nsurv.time)-1))).values
-        ]).astype(int))})
+        observations = self.lethality_to_conditional_survival(observations)
 
         # caluclate mortality observed in the different time windows
         # nleth = observations["lethality"].ffill(dim="time").fillna(0)
@@ -245,6 +213,37 @@ class Simulation(SimulationBase):
         
         return observations
 
+    @staticmethod
+    def lethality_to_conditional_survival(observations):
+        nzfe = observations["nzfe"]
+        nzfe = np.where(np.isnan(nzfe), 9, nzfe)
+        n = len(observations["id"])
+        nt = len(observations["time"])
+        nzfe = np.array(np.broadcast_to(nzfe, (nt, n)).T).astype(int)
+        observations["nzfe"] = (("id", "time"), nzfe)
+
+        # calculate survival from lethality
+        survival = observations["nzfe"] - observations["lethality"]
+        observations["survival"] = survival
+        
+        # fill nan values forward in time with the last observation 
+        # until the next observation. Afterwards leading nans are replaced with 
+        # nzfe(t_0) (no lethality observed before the first observation)
+        nsurv = survival.ffill(dim="time").fillna(observations.nzfe.isel(time=0))
+        # just make sure survival is 1 at the beginning of all experiments
+        np.testing.assert_allclose(nsurv.isel(time=0) - observations["nzfe"].isel(time=0), 0)
+        
+        # create a convenience observation survivors before t, which gives the
+        # number of living organisms at the end of time interval t-1
+        # this is used for calculating conditional survival
+        observations = observations.assign_coords({
+            "survivors_before_t": (("id", "time"), np.column_stack([
+                nsurv.isel(time=0).values, 
+                nsurv.isel(time=list(range(0, len(nsurv.time)-1))).values
+        ]).astype(int))})
+
+        return observations
+    
     def set_y0(self):
         # generate y0
         y0 = self.observations.isel(time=0).drop("lethality")
