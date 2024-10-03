@@ -1,6 +1,6 @@
 import numpyro
 from numpyro import distributions as dist
-from pymob.inference.numpyro_backend import LogNormalTrans
+from pymob.inference.numpyro_dist_map import LogNormalTrans
 import jax
 import jax.numpy as jnp
 
