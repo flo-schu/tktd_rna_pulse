@@ -255,8 +255,8 @@ class Simulation(SimulationBase):
 
     @staticmethod
     def indexer(sim, obs, data_var, idx):
-        obs_idx = obs[data_var].values[*idx[data_var]]
-        sim_idx = sim[data_var].values[*idx[data_var]]
+        obs_idx = obs[data_var].values[*idx[data_var]] # noqa: E999
+        sim_idx = sim[data_var].values[*idx[data_var]] # noqa: E999
         return obs_idx, sim_idx
 
     def objective_average(self, results):

@@ -23,8 +23,8 @@ def preprocessing(obs, masks):
     }
 
 def indexer(sim, obs, data_var, idx):
-    sim_indexed = sim[data_var][*idx[data_var]]
-    obs_indexed = obs[data_var][*idx[data_var]]
+    sim_indexed = sim[data_var][*idx[data_var]] # noqa: E999
+    obs_indexed = obs[data_var][*idx[data_var]] # noqa: E999
     return sim_indexed, obs_indexed
 
 
