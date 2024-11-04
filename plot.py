@@ -61,7 +61,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
         digitized = np.digitize(cext_0, bins)
         
         obs = obs.assign_coords(cext_group=("id", digitized)).swap_dims(id="cext_group")
-        data_variables = [v for v in  sim.data_variables if "cext" not in v]
+        data_variables = sim.config.data_structure.observed_data_variables
 
         fig, axes = plt.subplots(nrows=len(data_variables), ncols=len(bins), 
                                 sharex=True, sharey="row", figsize=(11,7), squeeze=False)

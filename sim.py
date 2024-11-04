@@ -467,7 +467,7 @@ class SingleSubstanceSim(Simulation):
 
 class SingleSubstanceSim2(SingleSubstanceSim):
     def set_fixed_parameters(self, input):
-        self.model_parameters["parameters"] = self.config.model_parameters.fixed_value_dict
+        self.model_parameters["parameters"] = self.config.model_parameters.value_dict
 
 
 if __name__ == "__main__":

@@ -222,7 +222,7 @@ def model_rna_pulse_3_6c_substance_independent_rna_protein_module(solver, obs, m
 
 
 
-def model_rna_pulse_3_6c_substance_specific(solver, obs, masks, ci_max, only_prior=False):
+def model_rna_pulse_3_6c_substance_specific(solver, obs, masks, indices, ci_max, only_prior=False, make_predictions=True):
     """Probability model with substance specific parameters and a conditional 
     binomial probability model for survival.
     
