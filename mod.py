@@ -206,5 +206,92 @@ def tktd_rna_3_6c(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, ci_max):
     dR_dt = r_rt * active - (R - r_0) * r_rd
     dP_dt = k_p * ((R - r_0) - P)
 
-
     return dCe_dt, dCi_dt, dR_dt, dP_dt
+
+def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_max):
+    """
+    A simplified RNA pulse model.
+
+    This function models gene expression and metabolization of the internal
+    concentration of a substance. The gene expression is controlled by a arctan
+    step function based on the internal concentration (Ci) and switches on the
+    gene's expression. The gene then translates a Protein, which metabolizes 
+    the internal concentration proportional to its expression level. The concept
+    of protein must be understood not as a single Protein but as a collection
+    of detoxification measures, which reduce the internal concentration of the
+    compound and keep it at a reasonable level.
+
+    Changes w.r.t. to RNA 3.6 model
+    -------------------------------
+    - The model removes the b_base parameter and replaces it with a fixed R_0
+      parameter
+
+    Parameters
+    ----------
+    t : float
+        Timestep at which the model is evaluated.
+
+    X : tuple
+        A tuple containing three elements: 
+        - Ce : float
+            The external concentration.
+        - Ci : float
+            The internal concentration.
+        - R : float
+            The gene expression level.
+        - P : float
+            The protein level.
+
+    r_0 : float
+        Initial value of the gene expression level.        
+    
+    k_i : float
+        Internal consumption rate constant.
+
+    k_m : float
+        Metabolization rate constant.
+    
+    r_rt : float
+        Maximum gene expression rate constant. Termed k_rt in the paper
+
+    r_rd : float
+        Gene degradation rate constant. Termed k_rd in the paper
+
+    z_ci : float
+        The threshold for gene expression.
+
+    v_rt : float, optional
+        The slope parameter for the inverse tangent step function. This
+        parameter regulates the responsiveness of the gene expression induction.
+
+    k_p : float
+        Dominant protein translation rate konstant.
+
+    Returns
+    -------
+    dCe_dt : float
+        The rate of change of external concentration.
+
+    dCi_dt : float
+        The rate of change of internal concentration.
+
+    dR_dt : float
+        The rate of change of gene expression level.
+
+    dR_dt : float
+        The rate of change of protein level.
+
+    """
+    Ce, Ci, R, P, H, S = X
+
+    active = 0.5 + (1 / jnp.pi) * jnp.arctan(v_rt * (Ci / ci_max - z_ci))
+
+    dCe_dt = 0.0
+    dCi_dt = Ce * k_i - Ci * P * k_m
+    dR_dt = r_rt * active - (R - r_0) * r_rd
+    dP_dt = k_p * ((R - r_0) - P)
+
+    dH_dt = kk * jnp.maximum(R - z, jnp.array([0.0], dtype=float)) + h_b
+    dS_dt = -dH_dt * S
+
+    return dCe_dt, dCi_dt, dR_dt, dP_dt, dH_dt, dS_dt
