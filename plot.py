@@ -41,7 +41,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
     old_time = sim.coordinates["time"].copy()
     sim.coordinates["time"] = np.linspace(24,120,200)
     x_dim="time"
-    obs_raw = sim.observations
+    obs_raw = sim.observations.copy()
     obs_raw.survival.values = (obs_raw.survival / obs_raw.nzfe).values
 
     figs = []
