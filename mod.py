@@ -284,7 +284,8 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
     """
     Ce, Ci, R, P, H, S = X
 
-    active = 0.5 + (1 / jnp.pi) * jnp.arctan(v_rt * (Ci / ci_max - z_ci))
+    # active = 0.5 + (1 / jnp.pi) * jnp.arctan(v_rt * (Ci / ci_max - z_ci))
+    active = 1 / (1 + jnp.exp(- v_rt * (Ci/ci_max - z_ci)))
 
     dCe_dt = 0.0
     dCi_dt = Ce * k_i - Ci * P * k_m
