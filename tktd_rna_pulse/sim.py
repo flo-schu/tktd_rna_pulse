@@ -12,10 +12,10 @@ from pymob.utils.store_file import prepare_casestudy
 from pymob.sim.base import stack_variables, unlist_attrs, enlist_attr
 from pymob.utils.config import lambdify_expression, lookup_args
 
-import mod
-import prob
-import data
-import plot
+from . import mod
+from . import prob
+from . import data
+from . import plot
 
 def xarray_indexer(ds, indices: dict, original_index="id"):
     for new_index, value in indices.items():
