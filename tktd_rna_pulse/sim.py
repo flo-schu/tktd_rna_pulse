@@ -11,6 +11,7 @@ from pymob.simulation import SimulationBase
 from pymob.utils.store_file import prepare_casestudy
 from pymob.sim.base import stack_variables, unlist_attrs, enlist_attr
 from pymob.utils.config import lambdify_expression, lookup_args
+from pymob.solvers import JaxSolver
 
 from . import mod
 from . import prob
@@ -469,6 +470,13 @@ class SingleSubstanceSim2(SingleSubstanceSim):
     def set_fixed_parameters(self, input):
         self.model_parameters["parameters"] = self.config.model_parameters.value_dict
 
+
+class SingleSubstanceSim3(SingleSubstanceSim2):
+
+    def initialize(self, input):
+        super().initialize(input)
+        self.solver = JaxSolver
+        self.config.simulation.batch_dimension = "id"
 
 if __name__ == "__main__":
     config = prepare_casestudy((
