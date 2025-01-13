@@ -472,10 +472,11 @@ class SingleSubstanceSim2(SingleSubstanceSim):
 
 
 class SingleSubstanceSim3(SingleSubstanceSim2):
+    solver = JaxSolver
+    _plot = plot
 
     def initialize(self, input):
         super().initialize(input)
-        self.solver = JaxSolver
         self.config.simulation.batch_dimension = "id"
 
 if __name__ == "__main__":
