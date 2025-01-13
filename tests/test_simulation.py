@@ -1,11 +1,15 @@
 import pytest
 from tktd_rna_pulse.sim import SingleSubstanceSim3
 
-# TODO: Refactor as a test suite that works for every case study.
-#       - class based. Iterates through test scenarios and options
-#       - tests: Setup, Simulation, Visualization, Inference
-#       - 
 
+def construct_sim(scenario, simulation_class):
+    """Helper function to construct simulations for debugging"""
+    sim = simulation_class(f"scenarios/{scenario}/settings.cfg")
+    sim.setup()
+    return sim
+
+
+# List test scenarios and simulations
 @pytest.fixture(scope="module", params=[
     "rna_pulse_3_6c_substance_specific",
     "rna_pulse_3_6c_substance_independent_rna_protein_module"
@@ -13,35 +17,38 @@ from tktd_rna_pulse.sim import SingleSubstanceSim3
 def scenario(request):
     return request.param
 
-@pytest.fixture(scope="module", params=[SingleSubstanceSim3])
+@pytest.fixture(scope="module", params=[
+    SingleSubstanceSim3
+])
 def simulation_class(request):
     return request.param
 
-def construct_sim(scenario, simulation_class):
-    sim = simulation_class(f"scenarios/{scenario}/settings.cfg")
-    sim.setup()
-    return sim
 
+# Derive simulations for testing from fixtures
 @pytest.fixture(scope="module")
 def sim(scenario, simulation_class):
     yield construct_sim(scenario, simulation_class)
 
+
+# run tests with the Simulation fixtures
 def test_setup(sim):
-    # simply tests the construction method
+    """Tests the construction method"""
     assert True
 
+
 def test_simulation(sim):
+    """Tests if a forward simulation pass can be computed"""
     sim.dispatch_constructor()
     evaluator = sim.dispatch({})
     evaluator()
     evaluator.results
 
-    # only test if no error is thrown
     assert True
             
 
 @pytest.mark.parametrize("backend", ["numpyro"])
 def test_inference(sim, backend):
+    """Tests if prior predictions can be computed for arbitrary backends"""
     sim.dispatch_constructor()
     sim.set_inferer(backend)
 
