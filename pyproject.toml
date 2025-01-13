@@ -58,5 +58,5 @@ push = true
     '__version__ = "{version}"'
 ]
 "README.md" = [
-    'git clone git@github.com:flo-schu/beeguts/{version}'
+    'git clone git@github.com:flo-schu/tktd_rna_pulse/{version}'
 ]
