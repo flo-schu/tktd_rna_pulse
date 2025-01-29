@@ -278,8 +278,8 @@ class Simulation(SimulationBase):
         fig = self._plot.plot_simulation_results(results)
 
     def prior_predictive_checks(self):
-        fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
-        for i, d in enumerate(self.data_variables):
+        fig, axes = plt.subplots(len(self.config.data_structure.observed_data_variables),3, sharex=True, figsize=(10,8))
+        for i, d in enumerate(self.config.data_structure.observed_data_variables):
             for j, s in enumerate(np.unique(self.observations.substance.values)):
                 ax = self._plot.plot_variable_substance_combi(
                     self,
@@ -317,8 +317,8 @@ class Simulation(SimulationBase):
 
     def posterior_predictive_checks(self):
         self.coordinates["time"] = np.linspace(24, 120, 100)
-        fig, axes = plt.subplots(4,3, sharex=True, figsize=(10,8))
-        for i, d in enumerate(self.data_variables):
+        fig, axes = plt.subplots(len(self.config.data_structure.observed_data_variables),3, sharex=True, figsize=(10,8))
+        for i, d in enumerate(self.config.data_structure.observed_data_variables):
             for j, s in enumerate(np.unique(self.observations.substance.values)):
                 ax = self._plot.plot_variable_substance_combi(
                     self,
@@ -479,6 +479,11 @@ class SingleSubstanceSim3(SingleSubstanceSim2):
         super().initialize(input)
         self.config.simulation.batch_dimension = "id"
         self.model_parameters["parameters"] = self.config.model_parameters.value_dict
+
+    def prior_predictive_checks(self):
+        SimulationBase.prior_predictive_checks(self)
+
+        self._plot.pretty_posterior_plot_multisubstance(self)
 
     def posterior_predictive_checks(self):
         SimulationBase.posterior_predictive_checks(self)
