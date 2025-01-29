@@ -483,8 +483,6 @@ class SingleSubstanceSim3(SingleSubstanceSim2):
     def prior_predictive_checks(self):
         SimulationBase.prior_predictive_checks(self)
 
-        self._plot.pretty_posterior_plot_multisubstance(self)
-
     def posterior_predictive_checks(self):
         SimulationBase.posterior_predictive_checks(self)
 
