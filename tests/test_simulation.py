@@ -11,8 +11,8 @@ def construct_sim(scenario, simulation_class):
 
 # List test scenarios and simulations
 @pytest.fixture(scope="module", params=[
-    "rna_pulse_3_6c_substance_specific",
-    "rna_pulse_3_6c_substance_independent_rna_protein_module"
+    "rna_pulse_4_substance_specific",
+    "rna_pulse_4_substance_independent_rna_protein_module"
 ])
 def scenario(request):
     return request.param
@@ -39,7 +39,7 @@ def test_setup(sim):
 def test_simulation(sim):
     """Tests if a forward simulation pass can be computed"""
     sim.dispatch_constructor()
-    evaluator = sim.dispatch({})
+    evaluator = sim.dispatch()
     evaluator()
     evaluator.results
 
@@ -61,14 +61,18 @@ def test_inference(sim, backend):
     # is substance. This can be filled in automatically. The big advantage of 
     # this is that it can be done in the evaluator, if the keyword is set.
     sim.inferer.prior_predictions(n=2)
+    
+    sim.config.inference_numpyro.svi_iterations = 1_000
+    sim.config.inference_numpyro.svi_learning_rate = 0.05
+    sim.config.inference_numpyro.draws = 100
+    sim.config.inference.n_predictions = 100
 
+    sim.inferer.run()
 
+    sim.inferer.idata
+
+    sim.posterior_predictive_checks()
 
 if __name__ == "__main__":
-    import os
-    if os.path.basename(os.getcwd()) != "tktd_rna_pulse":
-        # change directory to case_studies/beeguts
-        # this may work in case the root is a project with case_studies
-        os.chdir("case_studies/tktd_rna_pulse")
-
-    test_simulation(sim=construct_sim("rna_pulse_3_6c_substance_specific", SingleSubstanceSim3))
+    # test_simulation(sim=construct_sim("rna_pulse_3_6c_substance_specific", SingleSubstanceSim3))
+    test_inference(sim=construct_sim("rna_pulse_4_substance_specific", SingleSubstanceSim3), backend="numpyro")

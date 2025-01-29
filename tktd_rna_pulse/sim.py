@@ -478,6 +478,13 @@ class SingleSubstanceSim3(SingleSubstanceSim2):
     def initialize(self, input):
         super().initialize(input)
         self.config.simulation.batch_dimension = "id"
+        self.model_parameters["parameters"] = self.config.model_parameters.value_dict
+
+    def posterior_predictive_checks(self):
+        SimulationBase.posterior_predictive_checks(self)
+
+        self._plot.pretty_posterior_plot_multisubstance(self)
+    
 
 if __name__ == "__main__":
     config = prepare_casestudy((

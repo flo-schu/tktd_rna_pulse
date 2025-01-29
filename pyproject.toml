@@ -12,7 +12,7 @@ description = "Molecular TKTD: TKTD RNA Pulse model"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies=[
-    "pymob[numpyro] == 0.5.0a15",
+    "pymob[numpyro] == 0.5.0a18",
     "expydb == 0.3.3",
     "openpyxl==3.1.2",
     "ipykernel==6.26.0",
