@@ -54,7 +54,7 @@ push = true
     'current_version = "{version}"',
     'version = "{version}"'
 ]
-"beeguts/__init__.py" = [
+"tktd_rna_pulse/__init__.py" = [
     '__version__ = "{version}"'
 ]
 "README.md" = [
