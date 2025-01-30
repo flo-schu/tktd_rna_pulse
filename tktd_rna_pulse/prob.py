@@ -535,6 +535,58 @@ def conditional_survival_error_model(theta, simulation_results, observations, ma
         )
 
 
+
+def conditional_survival_hazard_error_model(theta, simulation_results, observations, masks, indices, only_prior=False, make_predictions=False):
+    
+    n_surv = observations["survivors_before_t"]
+    S_mask = masks["survival"]
+    S_conditional = conditional_survival_from_hazard(
+        x=simulation_results["H"],
+        mask=masks["survival"]
+    )
+    
+    if make_predictions:
+        obs_cint = None
+        obs_nrf2 = None
+        obs_surv = None
+    else:
+        obs_surv = observations["survival"]
+        obs_cint = numpyro.deterministic("cint_res", jnp.log(observations["cint"]+EPS) - jnp.log(simulation_results["cint"]+EPS))
+        obs_nrf2 = numpyro.deterministic("nrf2_res", jnp.log(observations["nrf2"]+EPS) - jnp.log(simulation_results["nrf2"]+EPS))
+
+    obs_vars = ["cint", "nrf2", "survival"]
+    n = {k: masks[k].sum() for k in obs_vars}
+    N = sum(n.values())
+    weights = {k: 1/len(obs_vars) for k in obs_vars}
+    scaling_factors = {k: 1/n[k]*N*weights[k] for k in obs_vars}
+
+    # calculate likelihoods
+    with numpyro.handlers.scale(scale=scaling_factors["cint"]):
+        lik_cint = numpyro.sample("cint_obs", dist.Normal(
+                loc=0.0,  # type: ignore
+                scale=theta["sigma_cint"]  # type: ignore
+            ).mask(masks["cint"]),
+            obs=obs_cint
+        )
+    
+    with numpyro.handlers.scale(scale=scaling_factors["nrf2"]):
+        lik_nrf2 = numpyro.sample("nrf2_obs", dist.Normal(
+                loc=0.0,  # type: ignore
+                scale=theta["sigma_nrf2"]  # type: ignore
+            ).mask(masks["nrf2"]), 
+            obs=obs_nrf2
+        )    
+    
+    with numpyro.handlers.scale(scale=scaling_factors["survival"]):    
+        lik_surv = numpyro.sample(
+            "survival_obs", dist.Binomial(
+                probs=S_conditional, 
+                total_count=n_surv
+            ).mask(S_mask), 
+            obs=obs_surv
+        )
+
+
 def independent_survival_error_model(theta, simulation_results, observations, masks):
     # indexing
     substance_idx = observations["substance_index"]
