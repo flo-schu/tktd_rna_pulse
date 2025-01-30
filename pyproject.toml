@@ -37,6 +37,9 @@ classifiers = [
 [tool.setuptools.packages.find]
 include = ["tktd_rna_pulse*"]
 
+[project.scripts]
+plot-likelihood-landscape = "tktd_rna_pulse.plot.likelihood:main"
+
 [tool.bumpver]
 current_version = "0.2.0"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
