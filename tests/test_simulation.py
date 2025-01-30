@@ -5,6 +5,9 @@ from tktd_rna_pulse.sim import SingleSubstanceSim3
 def construct_sim(scenario, simulation_class):
     """Helper function to construct simulations for debugging"""
     sim = simulation_class(f"scenarios/{scenario}/settings.cfg")
+
+    # this sets a different output directory
+    sim.config.case_study.scenario = "testing"
     sim.setup()
     return sim
 
@@ -60,7 +63,8 @@ def test_inference(sim, backend):
     # to ID is called substance_index. As the dimension of the variable
     # is substance. This can be filled in automatically. The big advantage of 
     # this is that it can be done in the evaluator, if the keyword is set.
-    sim.inferer.prior_predictions(n=2)
+    sim.config.inference.n_predictions = 2
+    sim.prior_predictive_checks()
     
     sim.config.inference_numpyro.svi_iterations = 1_000
     sim.config.inference_numpyro.svi_learning_rate = 0.05
