@@ -92,15 +92,20 @@ def main(config, parx, pary, std_dev, n_grid_points, n_vector_points, debug):
             sim.dispatch_constructor()
             sim.set_inferer("numpyro")
     
+            # @jax.jit
+            def only_data_loglik(joint, prior, data): 
+                return jnp.array(list({k: v.sum() for k,v in data.items()}.values())).sum()
+
             f, grad = sim.inferer.create_log_likelihood(
-                return_type="joint-log-likelihood",
+                return_type="custom",
+                custom_return_fn=only_data_loglik,
                 check=False,
                 scaled=True,
                 vectorize=False,
                 # gradients=True
             )
 
-            @partial(jax.jit, static_argnames=["_i","_j", "_mean", "_parx", "_pary"])
+            # @partial(jax.jit, static_argnames=["_i","_j", "_mean", "_parx", "_pary"])
             def func(theta, _i, _j, _mean, _parx, _pary):
                 # select first substance
                 params = {}
@@ -147,8 +152,8 @@ def main(config, parx, pary, std_dev, n_grid_points, n_vector_points, debug):
             dev = std_dev  # standard deviations
             ax = sim.inferer.plot_likelihood_landscape(
                 parameters=(parx, pary),
-                # bounds=([x - dev, x + dev], [y - dev, y + dev]),
-                bounds=([- dev, + dev], [- dev, + dev]),
+                bounds=([x - dev, x + dev], [y - dev, y + dev]),
+                # bounds=([- dev, + dev], [- dev, + dev]),
                 log_likelihood_func=func_,
                 gradient_func=None if n_vector_points== 0 else grad,
                 n_grid_points=n_grid_points,
@@ -168,7 +173,7 @@ if __name__ == "__main__":
     if bool(os.getenv("debug")):
         runner = CliRunner(echo_stdin=True)
         result = runner.invoke(main, catch_exceptions=False, args=[
-            "--config=scenarios/tktd_rna_4_substance_specific/settings.cfg",
+            "--config=scenarios/rna_pulse_4_substance_specific/settings.cfg",
             # using --no-debug is important here, because otherwise the pdb interferes
             # with the vscode call I suspect.
             "--parx=k_i_substance",
