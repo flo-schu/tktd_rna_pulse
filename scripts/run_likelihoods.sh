@@ -3,7 +3,7 @@
 #SBATCH --time=0-12:00:00                               # maximum time until job is cancelled
 #SBATCH --ntasks=1                                      # number of tasks
 #SBATCH --cpus-per-task=1                               # number of cpus requested
-#SBATCH --mem-per-cpu=16G                                # memory per cpu requested
+#SBATCH --mem-per-cpu=32G                                # memory per cpu requested
 #SBATCH --mail-type=begin                               # send mail when job begins
 #SBATCH --mail-type=end                                 # send mail when job ends
 #SBATCH --mail-type=fail                                # send mail if job fails
@@ -28,6 +28,7 @@ strings=(
     # "sigma_cint"
 )
 
+config=$1
 parameters=()
 
 # Iterate over the array to create pairs
@@ -50,8 +51,10 @@ index=$SLURM_ARRAY_TASK_ID
 pair=${parameters[index]}
 read -r parx pary <<< "$pair"
 
-python scripts/likelihood_landscape.py \
-    --config=scenarios/rna_pulse_4_substance_specific/settings.cfg \
+echo "Plotting Likelihood Landscapes for $pair ..."
+
+srun plot-likelihood-landscape \
+    --config=${config} \
     --parx="${parx}" \
     --pary="${pary}" \
     --std_dev=2 \
