@@ -10,9 +10,7 @@ import jax
 import jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 
-from hierarchical_molecular_tktd.sim import (
-    NomixHierarchicalSimulation, 
-)
+from pymob import Config
 
 def likelihood_landscapes(sim, parx, pary, std_dev, n_grid_points, n_vector_points):
 
@@ -143,7 +141,11 @@ def main(config, parx, pary, std_dev, n_grid_points, n_vector_points, debug):
         import pdb
         pdb.set_trace()
 
-    sim = NomixHierarchicalSimulation(config)
+    cfg = Config(config)
+    cfg.import_casestudy_modules()
+    Simulation = cfg.import_simulation_from_case_study()
+    sim = Simulation(config)
+
     likelihood_landscapes(
         sim=sim,
         parx=parx,
