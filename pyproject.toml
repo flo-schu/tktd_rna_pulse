@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tktd_rna_pulse"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
   { name="Florian Schunck", email="fluncki@protonmail.com" },
 ]
@@ -41,7 +41,7 @@ include = ["tktd_rna_pulse*"]
 plot-likelihood-landscape = "tktd_rna_pulse.plot.likelihood:main"
 
 [tool.bumpver]
-current_version = "0.2.0"
+current_version = "0.2.1"
 version_pattern = "MAJOR.MINOR.PATCH[PYTAGNUM]"
 commit_message = "bump version {old_version} -> {new_version}"
 tag_message = "{new_version}"
