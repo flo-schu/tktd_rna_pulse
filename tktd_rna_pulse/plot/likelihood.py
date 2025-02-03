@@ -18,7 +18,7 @@ def likelihood_landscapes(sim, parx, pary, std_dev, n_grid_points, n_vector_poin
 
     sim.config.inference_numpyro.gaussian_base_distribution = True
     sim.config.jaxsolver.throw_exception = False
-    sim.config.jaxsolver.max_steps = 10_000
+    sim.config.jaxsolver.max_steps = 100_000
 
     # set up the bounds for likelihood landscapes
     # this must be done here
@@ -75,7 +75,7 @@ def likelihood_landscapes(sim, parx, pary, std_dev, n_grid_points, n_vector_poin
     else:
         nrows = len(mpy)
 
-    fig, axes = plt.subplots(ncols=len(mpx), nrows=nrows, figsize=(2+len(mpx)*4,2+nrows*3), squeeze=False)
+    fig, axes = plt.subplots(ncols=len(mpx), nrows=nrows, figsize=(2+len(mpx)*4,1+nrows*3), squeeze=False)
 
     for i, (axcol, x) in enumerate(zip(axes.T, mpx)):
         for j, y in enumerate(mpy):
