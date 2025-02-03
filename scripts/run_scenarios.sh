@@ -3,7 +3,7 @@
 #SBATCH --time=0-12:00:00                               # maximum time until job is cancelled
 #SBATCH --ntasks=1                                      # number of tasks
 #SBATCH --cpus-per-task=1                               # number of cpus requested
-#SBATCH --mem-per-cpu=32G                               # memory per cpu requested
+#SBATCH --mem-per-cpu=16G                               # memory per cpu requested
 #SBATCH --mail-type=begin                               # send mail when job begins
 #SBATCH --mail-type=end                                 # send mail when job ends
 #SBATCH --mail-type=fail                                # send mail if job fails
@@ -16,9 +16,16 @@ echo "starting job"
 
 # Define a manually specified list of inputs
 scenarios=(
-    #"hierarchical_cext_nested_sigma_hyperprior"
-    "hierarchical_cext_nested_sigma_hyperprior_reduced_dataset"
+    "hierarchical_cext_nested_sigma_hyperprior_reduced_dataset_rna_pulse_5"
+    "hierarchical_cext_nested_sigma_hyperprior_reduced_dataset_rna_pulse_5_substance_independent"
+    "hierarchical_cext_nested_sigma_hyperprior_rna_pulse_5"
+    "hierarchical_cext_nested_sigma_hyperprior_rna_pulse_5_substance_independent"
+    # "rna_pulse_5_substance_independent_rna_protein_module"
+    # "rna_pulse_5_substance_specific"
 )
+
+# case_study="tktd_rna_pulse"
+case_study="hierarchical_molecular_tktd"
 
 # Get the index for the current array job
 index=$SLURM_ARRAY_TASK_ID
@@ -34,7 +41,7 @@ export JAX_ENABLE_X64=True
 export XLA_FLAGS="--xla_force_host_platform_device_count=${SLURM_CPUS_PER_TASK}"
 
 srun pymob-infer \
-    --case_study=hierarchical_molecular_tktd \
+    --case_study=$case_study \
     --scenario=$input_scenario \
     --package=.. \
     --n_cores $SLURM_CPUS_PER_TASK \
