@@ -441,51 +441,11 @@ from guts_base.prob import conditional_survival_from_hazard
 
 EPS = 9.9e-5
 
-def conditional_survival_error_model_old(theta, simulation_results, observations, masks, indices, only_prior=False, make_predictions=False):
-    # indexing
-    substance_idx = indices["substance_index"]
-    sigma_cint_indexed = theta["sigma_cint"][substance_idx]
-    sigma_nrf2_indexed = theta["sigma_nrf2"][substance_idx]
-
-    sigma_cint_ix_bc = jnp.broadcast_to(sigma_cint_indexed.reshape((-1, 1)), observations["cint"].shape)
-    sigma_nrf2_ix_bc = jnp.broadcast_to(sigma_nrf2_indexed.reshape((-1, 1)), observations["nrf2"].shape)
-
-    # error model
-    S = jnp.clip(simulation_results["H"], EPS, 1 - EPS) 
-    S_cond = S[:, 1:] / S[:, :-1]
-    S_cond_ = jnp.column_stack([jnp.ones_like(substance_idx), S_cond])
-
-    n_surv = observations["survivors_before_t"]
-    S_mask = masks["survival"]
-
-    if make_predictions:
-        obs_cint = None
-        obs_nrf2 = None
-        obs_survival = None
-    else:
-        obs_cint = observations["cint"]
-        obs_nrf2 = observations["nrf2"]
-        obs_survival = observations["survival"]
-    
-    numpyro.sample("cint_obs", dist.LogNormal(loc=jnp.log(simulation_results["cint"] + EPS), scale=sigma_cint_ix_bc).mask(masks["cint"]), obs=obs_cint)
-    numpyro.sample("nrf2_obs", dist.LogNormal(loc=jnp.log(simulation_results["nrf2"]), scale=sigma_nrf2_ix_bc).mask(masks["nrf2"]), obs=obs_nrf2)    
-    numpyro.sample(
-        "survival_obs", 
-        dist.Binomial(probs=S_cond_, total_count=n_surv).mask(S_mask), 
-        obs=obs_survival
-    )
 
 
 def conditional_survival_error_model(theta, simulation_results, observations, masks, indices, only_prior=False, make_predictions=False):
-    # indexing
     substance_idx = indices["substance_index"]
-    # sigma_cint_indexed = theta["sigma_cint"][substance_idx]
-    # sigma_nrf2_indexed = theta["sigma_nrf2"][substance_idx]
 
-    # sigma_cint_ix_bc = jnp.broadcast_to(sigma_cint_indexed.reshape((-1, 1)), observations["cint"].shape)
-    # sigma_nrf2_ix_bc = jnp.broadcast_to(sigma_nrf2_indexed.reshape((-1, 1)), observations["nrf2"].shape)
-
-    # error model
     S = jnp.clip(simulation_results["survival"], EPS, 1 - EPS) 
     S_cond = S[:, 1:] / S[:, :-1]
     S_cond_ = jnp.column_stack([jnp.ones_like(substance_idx), S_cond])
@@ -533,8 +493,6 @@ def conditional_survival_error_model(theta, simulation_results, observations, ma
             ).mask(S_mask), 
             obs=obs_surv
         )
-
-
 
 def conditional_survival_hazard_error_model(theta, simulation_results, observations, masks, indices, only_prior=False, make_predictions=False):
     
