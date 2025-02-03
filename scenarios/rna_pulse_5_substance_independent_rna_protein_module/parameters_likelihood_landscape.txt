@@ -1,12 +1,12 @@
 k_i_substance
 z_ci_substance
 k_m_substance
-r_rt_substance
-r_rd_substance
-v_rt_substance
-k_p_substance
-z_substance
-kk_substance
+r_rt
+r_rd
+v_rt
+k_p
+z
+kk
 # h_b
 # sigma_nrf2
 # sigma_cint

@@ -33,6 +33,8 @@ index=$SLURM_ARRAY_TASK_ID
 # Access the corresponding input from the list
 input_scenario=${scenarios[$index]}
 
+echo "Running ${input_scenario} ..."
+
 spack load miniconda3
 source activate hmt
 spack unload miniconda3
