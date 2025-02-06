@@ -40,6 +40,8 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
     # sim.inferer.load_results()
     old_time = sim.coordinates["time"].copy()
     sim.coordinates["time"] = np.linspace(24,120,200)
+    sim.dispatch_constructor()
+    
     x_dim="time"
     obs_raw = sim.observations.copy()
     obs_raw.survival.values = (obs_raw.survival / obs_raw.nzfe).values
@@ -83,7 +85,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
 
         post_pred = sim.inferer.posterior_predictions(
             n=sim.inferer.n_predictions, 
-            seed=sim.seed
+            seed=sim.config.simulation.seed
         )
 
         cext0 = post_pred[f"cext"].where(post_pred[f"cext"] < bins[-1], drop=True).mean(("draw", "chain"))
@@ -188,7 +190,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
 
 def plot_experiments(self, plot_individual=True):
     obs = self.observations.swap_dims(id="experiment_id")
-    experiments = self.dat.experiment_table("data/tox.db", self.observations)
+    experiments = self._data.experiment_table("data/tox.db", self.observations)
     cmap = mpl.colormaps["cool"]
 
     # first grouping is by endpoint, because in endpoint experiments,
@@ -282,14 +284,14 @@ def plot_variable_substance_combi(self: SimulationBase, ax, data_variable, subst
     if prediction == "posterior_predictions":
         preds = self.inferer.posterior_predictions(
             n=self.inferer.n_predictions, 
-            seed=self.seed
+            seed=self.config.simulation.seed
         )
         mode = "mean+hdi"
 
     elif prediction == "prior_predictions":
         preds = self.inferer.prior_predictions(
             n=50, # this will plot 50 x all experiments. This is sufficient to get an idea
-            seed=self.seed
+            seed=self.config.simulation.seed
         ).prior_predictive
         mode = "draws"
     
@@ -322,7 +324,7 @@ def plot_experiment(
     cmap=mpl.colormaps["cool"],
 ):
     # get metadata
-    experiments = self.dat.experiment_table(f"{self.data_path}/tox.db", self.observations)
+    experiments = self._data.experiment_table(f"{self.data_path}/tox.db", self.observations)
     meta = experiments.query(f"id=={experiment_id}").iloc[0]
     
     if ax is None:
