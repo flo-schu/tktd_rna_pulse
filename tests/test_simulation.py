@@ -15,7 +15,9 @@ def construct_sim(scenario, simulation_class):
 # List test scenarios and simulations
 @pytest.fixture(scope="module", params=[
     "rna_pulse_4_substance_specific",
-    "rna_pulse_4_substance_independent_rna_protein_module"
+    "rna_pulse_4_substance_independent_rna_protein_module",
+    "rna_pulse_5_substance_specific",
+    "rna_pulse_5_substance_independent_rna_protein_module",
 ])
 def scenario(request):
     return request.param
