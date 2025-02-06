@@ -1,6 +1,6 @@
 import numpyro
 from numpyro import distributions as dist
-from pymob.inference.numpyro_backend import LogNormalTrans
+from pymob.inference.numpyro_dist_map import LogNormalTrans
 import jax
 import jax.numpy as jnp
 
@@ -23,8 +23,8 @@ def preprocessing(obs, masks):
     }
 
 def indexer(sim, obs, data_var, idx):
-    sim_indexed = sim[data_var][*idx[data_var]]
-    obs_indexed = obs[data_var][*idx[data_var]]
+    sim_indexed = sim[data_var][*idx[data_var]] # noqa: E999
+    obs_indexed = obs[data_var][*idx[data_var]] # noqa: E999
     return sim_indexed, obs_indexed
 
 
@@ -222,7 +222,7 @@ def model_rna_pulse_3_6c_substance_independent_rna_protein_module(solver, obs, m
 
 
 
-def model_rna_pulse_3_6c_substance_specific(solver, obs, masks, ci_max, only_prior=False):
+def model_rna_pulse_3_6c_substance_specific(solver, obs, masks, indices, ci_max, only_prior=False, make_predictions=True):
     """Probability model with substance specific parameters and a conditional 
     binomial probability model for survival.
     

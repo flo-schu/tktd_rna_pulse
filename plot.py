@@ -41,7 +41,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
     old_time = sim.coordinates["time"].copy()
     sim.coordinates["time"] = np.linspace(24,120,200)
     x_dim="time"
-    obs_raw = sim.observations
+    obs_raw = sim.observations.copy()
     obs_raw.survival.values = (obs_raw.survival / obs_raw.nzfe).values
 
     figs = []
@@ -61,7 +61,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
         digitized = np.digitize(cext_0, bins)
         
         obs = obs.assign_coords(cext_group=("id", digitized)).swap_dims(id="cext_group")
-        data_variables = [v for v in  sim.data_variables if "cext" not in v]
+        data_variables = sim.config.data_structure.observed_data_variables
 
         fig, axes = plt.subplots(nrows=len(data_variables), ncols=len(bins), 
                                 sharex=True, sharey="row", figsize=(11,7), squeeze=False)
@@ -322,7 +322,7 @@ def plot_experiment(
     cmap=mpl.colormaps["cool"],
 ):
     # get metadata
-    experiments = self.dat.experiment_table("data/tox.db", self.observations)
+    experiments = self.dat.experiment_table(f"{self.data_path}/tox.db", self.observations)
     meta = experiments.query(f"id=={experiment_id}").iloc[0]
     
     if ax is None:
@@ -438,7 +438,7 @@ def plot_simulation_results(results: xr.Dataset, cmap=None, data_variables=None,
         cmap = mpl.colormaps["cool"]
     
     if substances is None:
-        substances = results.attrs["substance"]
+        substances = np.unique(results["substance"])
     
     nv = len(data_variables)
     ns = len(substances) 
