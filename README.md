@@ -10,7 +10,7 @@ like `tktd_nrf2_zfe`, you can install the package as follows.
 Open a command line utility (cmd, bash, ...) and execute
 
 ```bash
-git clone git@github.com:flo-schu/tktd_rna_pulse/0.2.3
+git clone git@github.com:flo-schu/tktd_rna_pulse/0.2.4
 cd tktd_rna_pulse
 ```
 
