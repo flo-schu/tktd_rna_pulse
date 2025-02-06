@@ -2,6 +2,8 @@
 
 ![alt text](zfe_model.png)
 
+The molecular TKTD model *TKTD-RNA-pulse* is a toxicokinetic toxicodynamic model that integrates the expression of the transcripton factor *nrf2* into the TKTD model and links it to metabolization of an exposed chemical and also to lethality. The work is a case study of experiments with zebrafish embryos, reusing data collected over 8 years at the UFZ in Leipzig, Germany. It evaluates the model exemplarily for 3 subtstances diuron, diclofenac and naproxen. The results are openly accessible under: https://pubs.acs.org/doi/10.1021/acs.est.4c06267
+
 ## Installation
 
 **If the case study was not already installed as a submodule** with a meta package
