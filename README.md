@@ -1,5 +1,6 @@
 # RNA pulse TKTD model
 
+![alt text](zfe_model.png)
 
 ## Installation
 
@@ -15,15 +16,16 @@ cd tktd_rna_pulse
 
 Create environment, activate it and install model package. 
 ```bash
-conda create -n tktd_rna_pulse
+conda create -n tktd_rna_pulse python=3.11
 conda activate tktd_rna_pulse
-conda install python=3.11
-pip install -r requirements.txt
+pip install -e .
 ```
+
+### Optionally download and track datasets with datalad
 
 download the existing results datasets and unlock the results dataset to be
 able to re-compute results. If you mess anything up, just delete the whole dataset
-and download again.
+and download again. (you may have to install datalad: https://handbook.datalad.org/en/latest/intro/installation.html)
 
 ```bash
 datalad clone git@gin.g-node.org:/flo-schu/tktd_nrf2_zfe__data.git data
@@ -34,8 +36,11 @@ cd data && git annex get
 
 if this is not possible create a new dataset with `datalad create -c text2git results` (see section below)
 
+### testing if everything worked
 
-The case studies should now be ready to use.
+The case studies should now be ready to use. Test by executing 
+
+`pymob-infer --help`
 
 
 ## Usage
@@ -57,9 +62,7 @@ there is a command line script provided by the `pymob` package which will direct
 run inference accroding to the scenario settings.cfg file provided in the scenario
 folder of the respective case study. For details see https://pymob.readthedocs.io/en/latest/case_studies.html
 
-`pymob-infer --case_study tktd_rna_pulse --scenario rna_pulse_3_6c_substance_specific --inference_backend numpyro`
-
-The options in the `settings.cfg` are the same as used when preparing the publication
+`pymob-infer --case_study tktd_rna_pulse --scenario rna_pulse_5_substance_independent_rna_protein_module --package=.. --inference_backend numpyro`
 
 The results will be stored in the results directory of the respective case study 
 unless otherwise specified in the settings.cfg
@@ -82,6 +85,7 @@ if the directory already exists, use the `-f` flag:
 
 ### Upload the dataset to gin.
 
+The following only works if you're a contributor on the g-node repository 
 
 1. Create a new repository on gin https://gin.g-node.org/
 
