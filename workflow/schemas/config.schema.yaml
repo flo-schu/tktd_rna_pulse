@@ -1,0 +1,22 @@
+# inspired by https://github.com/snakemake-workflows/rna-seq-star-deseq2/blob/master/workflow/schemas/config.schema.yaml
+
+$schema: "http://json-schema.org/draft-06/schema#"
+description: snakemake configuration file
+
+type: object
+
+properties:
+  scenarios: 
+    type: array
+
+likelihood_landscapes:
+  type: object
+  properties:
+    run: boolean
+    n_grid_points: integer
+    n_vector_points: integer
+    std_dev: float
+
+
+required:
+  - scenarios
