@@ -147,7 +147,7 @@ def likelihood_landscapes(sim, parx, pary, std_dev, n_grid_points, n_vector_poin
             ax.set_ylabel(f"{pary.replace(f'_{pary_extra_dim}', '')}{pary_coords[j]}")
 
             fig.tight_layout()
-            ax.figure.savefig(os.path.join(folder, f"{parx}__{pary}.png"))
+            ax.figure.savefig(os.path.join(folder, f"parx~{parx}__pary~{pary}.png"))
 
 @click.command()
 @click.option("--config", type=str)
