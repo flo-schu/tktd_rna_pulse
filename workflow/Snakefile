@@ -1,18 +1,13 @@
-# inspired by: https://github.com/snakemake-workflows/rna-seq-star-deseq2/blob/master/workflow/Snakefile
-
 from snakemake.utils import min_version
+min_version("8.27")
 
-##### set minimum snakemake version #####
-min_version("8.27.0")
-
-##### setup report #####
 configfile: "workflow/config.yaml"
 
-##### load rules #####
-include: "rules/common.smk"
-include: "rules/pymob_infer.smk"
-include: "rules/likelihood_landscape.smk"
+module pymob_workflow:
+    snakefile:
+        # here, it is also possible to provide a plain raw URL like "https://github.com/snakemake-workflows/dna-seq-gatk-variant-calling/raw/v2.0.1/workflow/Snakefile"
+        github("flo-schu/pymob-workflow", path="workflow/Snakefile", tag="v0.2.1")
+    config:
+        config
 
-rule all:
-    input:
-        get_final_output()
+use rule * from pymob_workflow

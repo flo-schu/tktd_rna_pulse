@@ -1,6 +1,8 @@
+case_study: tktd_rna_pulse
+
 scenarios:
-  # - rna_pulse_4_substance_specific
-  # - rna_pulse_4_substance_independent_rna_protein_module
+  - rna_pulse_4_substance_specific
+  - rna_pulse_4_substance_independent_rna_protein_module
   - rna_pulse_5_substance_specific
   - rna_pulse_5_substance_independent_rna_protein_module
 
