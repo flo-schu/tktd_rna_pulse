@@ -4,3 +4,4 @@ data
 .ipynb_checkpoints
 .pytest_cache
 *.egg-info
+.snakemake
