@@ -204,10 +204,15 @@ class Simulation(SimulationBase):
 
         # replace nominal concentrations with maximum measured external concentrations
         # mean leads to worse relationships
-        cext_obs = ~observations.cext.isnull().all(dim="time")
-        old_cext = observations["cext_nom"]
-        new_cext = observations["cext"].max("time")
-        observations["cext_nom"] = xr.where(cext_obs, new_cext, old_cext) 
+        if not hasattr(self.config.simulation, "use_nominal_concentrations"):
+            self.config.simulation.use_nominal_concentrations = False
+        
+        if not bool(self.config.simulation.use_nominal_concentrations):
+            cext_obs = ~observations.cext.isnull().all(dim="time")
+            old_cext = observations["cext_nom"]
+            new_cext = observations["cext"].max("time")
+            observations["cext_nom"] = xr.where(cext_obs, new_cext, old_cext) 
+
 
         # if observations.attrs["ids_subset"] is not None:
         #     observations = observations.sel(id=observations.attrs["ids_subset"])
