@@ -5,10 +5,18 @@ scenarios:
   - rna_pulse_4_substance_independent_rna_protein_module
   - rna_pulse_5_substance_specific
   - rna_pulse_5_substance_independent_rna_protein_module
+  - rna_pulse_5_substance_specific_full_dataset
+  - rna_pulse_5_substance_independent_rna_protein_module_full_dataset
 
 likelihood_landscapes:
   run: True
   n_grid_points: 100
   n_vector_points: 50
   std_dev: 2.0
+  conda_env: hmt
 
+pymob_infer:
+  cores: 1
+  backend: numpyro
+  conda_env: hmt
+  jax_x64: True
