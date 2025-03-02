@@ -1,3 +1,5 @@
+![testing](https://github.com/flo-schu/tktd_rna_pulse/actions/workflows/python-test.yml/badge.svg)
+
 # RNA pulse TKTD model
 
 ![alt text](zfe_model.png)
