@@ -65,7 +65,9 @@ jobs:
 
 
   test:
-    name: 🛠️ Test package
+    name: 🧪 Unit testing
+    needs: determine_skip
+
     if: ${{ github.env.skip != 'true' }}
 
     runs-on: ubuntu-latest
@@ -88,8 +90,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install flake8 pytest datalad
         pip install -e .
+
+    - uses: jstritch/setup-git-annex@v1
+
+    - name: Download dataset
+      run: |
+        datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
 
     - name: Lint with flake8
       run: |
@@ -159,9 +167,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
-        pip install -e .
-        pip install nbconvert
+        pip install nbconvert datalad
+        pip install -e .[dev]
+    
+    - uses: jstritch/setup-git-annex@v1
+
+    - name: Download dataset
+      run: |
+        datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
+        cd data && git annex get  
 
     - name: Test notebooks
       run: | 

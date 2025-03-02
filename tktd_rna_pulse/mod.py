@@ -223,8 +223,9 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
 
     Changes w.r.t. to RNA 3.6 model
     -------------------------------
-    - The model removes the b_base parameter and replaces it with a fixed R_0
-      parameter
+    - The model uses a sigmoid switch function instead of arctan
+    - The model computes the hazard from the threshold model directly instead
+      of the post processing
 
     Parameters
     ----------
@@ -241,6 +242,10 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
             The gene expression level.
         - P : float
             The protein level.
+        - H : float
+            The cumulative hazard.
+        - P : float
+            The survival probability.
 
     r_0 : float
         Initial value of the gene expression level.        
@@ -281,6 +286,11 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
     dR_dt : float
         The rate of change of protein level.
 
+    dH_dt : float
+        The hazard rate h(t) = b * max(D, 0) + h_b
+    
+    dS_dt : float
+        The rate of change of the survival probability 
     """
     Ce, Ci, R, P, H, S = X
 
@@ -311,10 +321,109 @@ def tktd_rna_5(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
     of detoxification measures, which reduce the internal concentration of the
     compound and keep it at a reasonable level.
 
-    Changes w.r.t. to RNA 3.6 model
+    Changes w.r.t. to RNA 4 model
     -------------------------------
-    - The model removes the b_base parameter and replaces it with a fixed R_0
-      parameter
+    - The model does not evolve the survival probability S over time any more
+      This is done more efficiently in the post processing, by simply taking the 
+      exponent
+
+
+    Parameters
+    ----------
+    t : float
+        Timestep at which the model is evaluated.
+
+    X : tuple
+        A tuple containing three elements: 
+        - Ce : float
+            The external concentration.
+        - Ci : float
+            The internal concentration.
+        - R : float
+            The gene expression level.
+        - P : float
+            The protein level.
+        - H : float
+            The cumulative hazard.
+
+    r_0 : float
+        Initial value of the gene expression level.        
+    
+    k_i : float
+        Internal consumption rate constant.
+
+    k_m : float
+        Metabolization rate constant.
+    
+    r_rt : float
+        Maximum gene expression rate constant. Termed k_rt in the paper
+
+    r_rd : float
+        Gene degradation rate constant. Termed k_rd in the paper
+
+    z_ci : float
+        The threshold for gene expression.
+
+    v_rt : float, optional
+        The slope parameter for the inverse tangent step function. This
+        parameter regulates the responsiveness of the gene expression induction.
+
+    k_p : float
+        Dominant protein translation rate konstant.
+
+    Returns
+    -------
+    dCe_dt : float
+        The rate of change of external concentration.
+
+    dCi_dt : float
+        The rate of change of internal concentration.
+
+    dR_dt : float
+        The rate of change of gene expression level.
+
+    dR_dt : float
+        The rate of change of protein level.
+    
+    dH_dt : float
+        The hazard rate h(t) = b * max(D, 0) + h_b
+    """
+    Ce, Ci, R, P, H = X
+
+    # active = 0.5 + (1 / jnp.pi) * jnp.arctan(v_rt * (Ci / ci_max - z_ci))
+    active = 1 / (1 + jnp.exp(- v_rt * (Ci/ci_max - z_ci)))
+
+    dCe_dt = 0.0
+    dCi_dt = Ce * k_i - Ci * P * k_m
+    dR_dt = r_rt * active - (R - r_0) * r_rd
+    dP_dt = k_p * ((R - r_0) - P)
+
+    dH_dt = kk * jnp.maximum(R - z, jnp.array([0.0], dtype=float)) + h_b
+
+    return dCe_dt, dCi_dt, dR_dt, dP_dt, dH_dt
+
+def survival(results, t, interpolation):
+    results["survival"] = jnp.exp(-results["H"])
+    return results
+
+
+
+def tktd_rna_6(t, X, r_0, k_i, k_e, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_max):
+    """
+    A simplified RNA pulse model.
+
+    This function models gene expression and metabolization of the internal
+    concentration of a substance. The gene expression is controlled by a arctan
+    step function based on the internal concentration (Ci) and switches on the
+    gene's expression. The gene then translates a Protein, which metabolizes 
+    the internal concentration proportional to its expression level. The concept
+    of protein must be understood not as a single Protein but as a collection
+    of detoxification measures, which reduce the internal concentration of the
+    compound and keep it at a reasonable level.
+
+    Changes w.r.t. to RNA 5 model
+    -------------------------------
+    - The model includes a term for passive degradation
 
     Parameters
     ----------
@@ -336,7 +445,10 @@ def tktd_rna_5(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
         Initial value of the gene expression level.        
     
     k_i : float
-        Internal consumption rate constant.
+        Uptake rate constant.
+
+    k_e : float
+        Passive elimination rate constant.
 
     k_m : float
         Metabolization rate constant.
@@ -378,14 +490,10 @@ def tktd_rna_5(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
     active = 1 / (1 + jnp.exp(- v_rt * (Ci/ci_max - z_ci)))
 
     dCe_dt = 0.0
-    dCi_dt = Ce * k_i - Ci * P * k_m
+    dCi_dt = k_i * Ce  - Ci * P * k_m - k_e * Ci
     dR_dt = r_rt * active - (R - r_0) * r_rd
     dP_dt = k_p * ((R - r_0) - P)
 
     dH_dt = kk * jnp.maximum(R - z, jnp.array([0.0], dtype=float)) + h_b
 
     return dCe_dt, dCi_dt, dR_dt, dP_dt, dH_dt
-
-def survival(results, t, interpolation):
-    results["survival"] = jnp.exp(-results["H"])
-    return results

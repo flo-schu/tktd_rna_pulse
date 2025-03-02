@@ -12,14 +12,11 @@ description = "Molecular TKTD: TKTD RNA Pulse model"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies=[
-    "pymob[numpyro] == 0.5.0a19",
-    "guts_base @ git+ssh://git@gitlab.uni-osnabrueck.de/fschunck/guts_base.git@0.5.1",
-    "expydb == 0.5.6",
+    "pymob[numpyro] >= 0.5.0a19",
+    "guts_base @ git+https://gitlab.uni-osnabrueck.de/fschunck/guts_base.git@0.5.4",
+    "expydb >= 0.5.6",
     "openpyxl==3.1.2",
-    "ipykernel==6.26.0",
-    "ipywidgets==8.1.1",
-    "bottleneck==1.3.7",
-    "jupyterlab"
+    "bottleneck",
 ]
 license = {file = "LICENSE"}
 classifiers = [
@@ -43,6 +40,8 @@ dev = [
     "pytest >= 7.3", 
     "bumpver", 
     "pre-commit",
+    "ipykernel",
+    "ipywidgets",
 ]
 
 [project.scripts]
