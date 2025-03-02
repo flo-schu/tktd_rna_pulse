@@ -65,7 +65,7 @@ jobs:
 
 
   test:
-    name: 🛠️ Test package
+    name: 🧪 Unit testing
     if: ${{ github.env.skip != 'true' }}
 
     runs-on: ubuntu-latest
@@ -160,8 +160,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install nbconvert
-        pip install ipykernel
-        pip install -e .
+        pip install -e .[dev]
 
     - name: Test notebooks
       run: | 
