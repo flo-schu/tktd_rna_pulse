@@ -38,6 +38,13 @@ classifiers = [
 [tool.setuptools.packages.find]
 include = ["tktd_rna_pulse*"]
 
+[project.optional-dependencies]
+dev = [
+    "pytest >= 7.3", 
+    "bumpver", 
+    "pre-commit",
+]
+
 [project.scripts]
 plot-likelihood-landscape = "tktd_rna_pulse.plot.likelihood:main"
 
@@ -63,4 +70,9 @@ push = true
 ]
 "README.md" = [
     'git clone git@github.com:flo-schu/tktd_rna_pulse/{version}'
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow='mark test as slow.'"
 ]

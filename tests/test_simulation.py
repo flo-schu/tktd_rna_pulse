@@ -50,7 +50,7 @@ def test_simulation(sim):
 
     assert True
             
-
+@pytest.mark.slow
 @pytest.mark.parametrize("backend", ["numpyro"])
 def test_inference(sim, backend):
     """Tests if prior predictions can be computed for arbitrary backends"""
