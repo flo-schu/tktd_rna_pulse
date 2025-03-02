@@ -66,6 +66,8 @@ jobs:
 
   test:
     name: 🧪 Unit testing
+    needs: determine_skip
+
     if: ${{ github.env.skip != 'true' }}
 
     runs-on: ubuntu-latest
@@ -93,8 +95,7 @@ jobs:
 
     - name: Download dataset
       run: |
-        datalad clone git@gin.g-node.org:/flo-schu/tktd_nrf2_zfe__data.git data
-        cd data && git annex get  
+        datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
 
     - name: Lint with flake8
       run: |
@@ -169,7 +170,7 @@ jobs:
 
     - name: Download dataset
       run: |
-        datalad clone git@gin.g-node.org:/flo-schu/tktd_nrf2_zfe__data.git data
+        datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
         cd data && git annex get  
 
     - name: Test notebooks

@@ -32,10 +32,9 @@ able to re-compute results. If you mess anything up, just delete the whole datas
 and download again. (you may have to install datalad: https://handbook.datalad.org/en/latest/intro/installation.html)
 
 ```bash
-datalad clone git@gin.g-node.org:/flo-schu/tktd_nrf2_zfe__data.git data
-datalad clone git@gin.g-node.org:/flo-schu/tktd_rna_pulse__results.git results
-datalad unlock case_studies/tktd_rna_pulse/results
-cd data && git annex get
+datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
+datalad install --branch master -s https://gin.g-node.org:/flo-schu/tktd_rna_pulse__results results
+datalad unlock results
 ```
 
 if this is not possible create a new dataset with `datalad create -c text2git results` (see section below)
