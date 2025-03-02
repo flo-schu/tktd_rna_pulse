@@ -223,8 +223,9 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
 
     Changes w.r.t. to RNA 3.6 model
     -------------------------------
-    - The model removes the b_base parameter and replaces it with a fixed R_0
-      parameter
+    - The model uses a sigmoid switch function instead of arctan
+    - The model computes the hazard from the threshold model directly instead
+      of the post processing
 
     Parameters
     ----------
@@ -241,6 +242,10 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
             The gene expression level.
         - P : float
             The protein level.
+        - H : float
+            The cumulative hazard.
+        - P : float
+            The survival probability.
 
     r_0 : float
         Initial value of the gene expression level.        
@@ -281,6 +286,11 @@ def tktd_rna_4(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
     dR_dt : float
         The rate of change of protein level.
 
+    dH_dt : float
+        The hazard rate h(t) = b * max(D, 0) + h_b
+    
+    dS_dt : float
+        The rate of change of the survival probability 
     """
     Ce, Ci, R, P, H, S = X
 
@@ -311,10 +321,12 @@ def tktd_rna_5(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
     of detoxification measures, which reduce the internal concentration of the
     compound and keep it at a reasonable level.
 
-    Changes w.r.t. to RNA 3.6 model
+    Changes w.r.t. to RNA 4 model
     -------------------------------
-    - The model removes the b_base parameter and replaces it with a fixed R_0
-      parameter
+    - The model does not evolve the survival probability S over time any more
+      This is done more efficiently in the post processing, by simply taking the 
+      exponent
+
 
     Parameters
     ----------
@@ -331,6 +343,8 @@ def tktd_rna_5(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
             The gene expression level.
         - P : float
             The protein level.
+        - H : float
+            The cumulative hazard.
 
     r_0 : float
         Initial value of the gene expression level.        
@@ -370,7 +384,9 @@ def tktd_rna_5(t, X, r_0, k_i, r_rt, r_rd, z_ci, v_rt, k_p, k_m, h_b, kk, z, ci_
 
     dR_dt : float
         The rate of change of protein level.
-
+    
+    dH_dt : float
+        The hazard rate h(t) = b * max(D, 0) + h_b
     """
     Ce, Ci, R, P, H = X
 
