@@ -1,4 +1,4 @@
-![testing](https://github.com/flo-schu/tktd_rna_pulse/actions/workflows/python-test.yml/badge.svg)
+![testing](https://github.com/flo-schu/tktd_rna_pulse/actions/workflows/test.yml/badge.svg)
 
 # RNA pulse TKTD model
 
