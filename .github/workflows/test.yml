@@ -93,6 +93,8 @@ jobs:
         python -m pip install flake8 pytest datalad
         pip install -e .
 
+    - uses: jstritch/setup-git-annex@v1
+
     - name: Download dataset
       run: |
         datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
@@ -167,6 +169,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install nbconvert datalad
         pip install -e .[dev]
+    
+    - uses: jstritch/setup-git-annex@v1
 
     - name: Download dataset
       run: |
