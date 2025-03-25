@@ -17,6 +17,7 @@ from . import mod
 from . import prob
 from . import data
 from . import plot
+from . import report
 
 def xarray_indexer(ds, indices: dict, original_index="id"):
     for new_index, value in indices.items():
@@ -35,6 +36,7 @@ def is_iterable(x):
     
 class Simulation(SimulationBase):
     __pymob_version__ = "0.4.1"
+    Report = report.MolecularTKTDReport
 
     def generate_artificial_data(self, nan_frac=0.2):  
         # create artificial data from Evaluator      
@@ -356,6 +358,10 @@ class Simulation(SimulationBase):
 
         return obs_ids
 
+
+    def report(self):
+        super().report()
+        self._report.model_inadequacy_metrics(idata=self.inferer.idata, indices=self.indices, index="substance")
 
 
 class SingleSubstanceSim(Simulation):
