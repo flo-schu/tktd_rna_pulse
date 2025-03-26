@@ -93,7 +93,8 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
         cmax = float(cext0.max())
         cmin = float(cext0.min())
         # minmax_scaler = lambda x: (x - cmin) / (cmax - cmin)
-        minmax_scaler = mpl.colors.TwoSlopeNorm(vmin=cmin, vcenter=midpoint, vmax=cmax)
+        cmid = min(midpoint, cmax/2)
+        minmax_scaler = mpl.colors.TwoSlopeNorm(vmin=cmin, vcenter=cmid, vmax=cmax)
         
         for bi, bin in enumerate(bins):
             print(f"PRETTY PLOT: make predictions for {s.capitalize()} in bin ({bi+1}/{len(bins)})")
