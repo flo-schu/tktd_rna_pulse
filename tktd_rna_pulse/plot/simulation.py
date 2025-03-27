@@ -47,6 +47,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
     obs_raw.survival.values = (obs_raw.survival / obs_raw.nzfe).values
 
     figs = []
+    outs = []
     for s in substances:
         susbtance_mask = sim.observations.substance == s
         obs = obs_raw.where(susbtance_mask, drop=True)
@@ -177,7 +178,10 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
 
         figs.append(fig)
         if save:
-            fig.savefig(f"{sim.output_path}/combined_pps_figure_{s}.png")
+            out = f"{sim.output_path}/combined_pps_figure_{s}.png"
+            fig.savefig(out)
+            outs.append(out)
+
 
         if show:
             plt.show()
@@ -186,7 +190,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
 
     sim.coordinates["time"] = old_time
 
-    return figs
+    return figs, outs
 
 
 def plot_experiments(self, plot_individual=True):

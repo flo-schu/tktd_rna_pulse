@@ -8,7 +8,7 @@ import pandas as pd
 import xarray as xr
 
 from pymob.sim.report import Report, reporting
-
+from tktd_rna_pulse.plot import pretty_posterior_plot_multisubstance
 
 def _local_variance(residuals: np.ndarray):
     """This uses aggregated data residuals[id,time].mean(id).
@@ -48,6 +48,7 @@ def _autocorrelation(residuals, lag=1):
     return pd.Series(residuals).autocorr(lag=lag)
 
 class MolecularTKTDReport(Report):
+    obs_transform_funcs = {"survival": lambda x: x / x.max("id")}
 
     @reporting
     def model_inadequacy_metrics(self, idata, indices: Dict[str,xr.DataArray], index:str):
@@ -63,35 +64,37 @@ class MolecularTKTDReport(Report):
         """
         autocorr_lag = 1
 
-        self._write(
+        description = (
             "The different metrics are measures for the model inadequacy. The comparison "+
             "to `metric_value_if_normal_dist` is a simulation of normally distributed "+
             "residuals that have the same data structure in terms of dimensionality "+
-            "(id x time) and missing values. If the `metric_value` falls within that interval, the model can be assumed as not inadequate.\n"+
-            "   - **autocorrelation**: Measures the correlation of the residuals with\n"+
-            "     themselves with a lag of 1. High absolute autocorrelation means, the\n"+
-            "     variable is not normally distributed. Ideal would be values close to 0.\n"+
-            "   - **deviation log-prob**: Uses a t-test to estimate the probability of\n"+
-            "     the replicates at a time t being different from zero. The result is\n"+
-            "     the summed log-probability. Low (negative) log probs indicate high \n"+
-            "     probability for deviation.\n"+
-            "   - **significant deviations**: Uses a t-test to estimate the probability \n"+
-            "     of the replicates at a time t being different from zero. The result is\n"+
-            "     the number of significant deviations (for an alpha level of 0.05).\n"+
-            "     High number of deviations indicate an inadequate model\n"+
-            "   - **local/global variance**: This metric calculates the local variance\n"+
-            "     as a rolling variance of always 3 direct neighboring residuals. The\n"+
-            "     local variances are then averaged and divided by the global averages\n"+
-            "     of all residuals. The basis for the calculation is the residuals averaged\n"+
-            "     by id. Values close to 1 indicate an adequate model \n"+
-            "   - **replicate/global variance**: This metric calculates the replicate \n"+
-            "     variance at time t, averages it and divides the number by the global\n"+
-            "     variance. The local variances are then averaged and divided by the global\n"+
-            "     averages of all residuals. The basis for the calculation is the residuals\n"+
-            "     averaged by id. Values close to 1 indicate an adequate model\n"
+            "(id x time) and missing values. If the `metric_value` falls within that interval, the model can be assumed as not inadequate.\n\n"+
+            "- **autocorrelation**: Measures the correlation of the residuals with\n"+
+            "  themselves with a lag of 1. High absolute autocorrelation means, the\n"+
+            "  variable is not normally distributed. Ideal would be values close to 0.\n"+
+            "- **deviation log-prob**: Uses a t-test to estimate the probability of\n"+
+            "  the replicates at a time t being different from zero. The result is\n"+
+            "  the summed log-probability. Low (negative) log probs indicate high \n"+
+            "  probability for deviation.\n"+
+            "- **significant deviations**: Uses a t-test to estimate the probability \n"+
+            "  of the replicates at a time t being different from zero. The result is\n"+
+            "  the number of significant deviations (for an alpha level of 0.05).\n"+
+            "  High number of deviations indicate an inadequate model\n"+
+            "- **local/global variance**: This metric calculates the local variance\n"+
+            "  as a rolling variance of always 3 direct neighboring residuals. The\n"+
+            "  local variances are then averaged and divided by the global averages\n"+
+            "  of all residuals. The basis for the calculation is the residuals averaged\n"+
+            "  by id. Values close to 1 indicate an adequate model \n"+
+            "- **replicate/global variance**: This metric calculates the replicate \n"+
+            "  variance at time t, averages it and divides the number by the global\n"+
+            "  variance. The local variances are then averaged and divided by the global\n"+
+            "  averages of all residuals. The basis for the calculation is the residuals\n"+
+            "  averaged by id. Values close to 1 indicate an adequate model\n"
         )
 
         df = []
+        self._write("### Residuals")
+
         for endpoint in list(idata.posterior_residuals.data_vars.keys()):
             for s_i in range(len(np.unique(indices[index].values))):
                 # substance = "diuron"
@@ -153,7 +156,7 @@ class MolecularTKTDReport(Report):
                 series = metric_report(endpoint, substance, "autocorrelation", autocor, autocor_if_normal)
                 df.append(series)
 
-                fig, ax = plt.subplots(1,1)
+                fig, ax = plt.subplots(1,1, figsize=(6, 3))
                 ax.plot(residuals.time, np.zeros_like(residuals.time), ls="--", color="black", lw=1)
                 ax.plot(residuals.time, residuals.T, ls="", marker="o", color="tab:blue")
                 ax.plot(residuals_mean.time, residuals_mean, ls="-", color="black", lw=2)
@@ -161,8 +164,25 @@ class MolecularTKTDReport(Report):
                 ax.set_title(substance.capitalize())
                 ax.set_ylabel(f"Standardized residuals ({endpoint})")
                 ax.set_xlabel("Time")
+                fig.tight_layout()
                 fig.savefig(os.path.join(self.config.case_study.output_path, f"residuals_{endpoint}_{substance}.png"))
+                self._write(f"![Resiudal {endpoint} dynamics of {substance}](residuals_{endpoint}_{substance}.png)")
+
                 plt.close()
 
-        self._write(pd.DataFrame(df).sort_values(by=["metric", "data_variable", "index"]))
+        self._write("### Model inadequacy")
+        self._write(description)
+        df = pd.DataFrame(df).sort_values(by=["metric", "data_variable", "index"]).set_index(["metric", "data_variable", "index"])
+        out = os.path.join(self.config.case_study.output_path, "model_inadequacy_metrics.csv")
+        df.to_csv(out)
+        self._write(df.reset_index().to_markdown())
 
+        return out
+
+    @reporting
+    def visualizations(self, sim):
+        _, outs = pretty_posterior_plot_multisubstance(sim, save=True, show=False)
+        for o in outs:
+            self._write(f"![Posterior model fits]({os.path.basename(o)})")
+
+        return outs

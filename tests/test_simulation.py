@@ -78,6 +78,7 @@ def test_inference(sim, backend):
     sim.inferer.idata
 
     sim.posterior_predictive_checks()
+    sim.report()
 
 if __name__ == "__main__":
     # test_simulation(sim=construct_sim("rna_pulse_3_6c_substance_specific", SingleSubstanceSim3))

@@ -361,6 +361,7 @@ class Simulation(SimulationBase):
 
     def report(self):
         super().report()
+        self._report.visualizations(sim=self)
         self._report.model_inadequacy_metrics(idata=self.inferer.idata, indices=self.indices, index="substance")
 
 
@@ -497,7 +498,6 @@ class SingleSubstanceSim3(SingleSubstanceSim2):
     def posterior_predictive_checks(self):
         SimulationBase.posterior_predictive_checks(self)
 
-        self._plot.pretty_posterior_plot_multisubstance(self)
     
 
 if __name__ == "__main__":

@@ -20,7 +20,7 @@ cd tktd_rna_pulse
 
 Create environment, activate it and install model package. 
 ```bash
-conda create -n tktd_rna_pulse python=3.11
+conda create -n tktd_rna_pulse python=3.11 pandoc
 conda activate tktd_rna_pulse
 pip install -e .
 ```
