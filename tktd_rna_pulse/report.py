@@ -1,13 +1,14 @@
 import os
-from typing import Dict
+from typing import Dict, List, Literal, Dict, Optional
 
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.stats import norm, ttest_1samp
 import pandas as pd
 import xarray as xr
+import arviz as az
 
-from pymob.sim.report import Report, reporting
+from pymob.sim.report import Report, reporting, _nrmse_from_idata, _bic_from_idata, _loglik_from_idata
 from tktd_rna_pulse.plot import pretty_posterior_plot_multisubstance
 
 def _local_variance(residuals: np.ndarray):
@@ -186,3 +187,124 @@ class MolecularTKTDReport(Report):
             self._write(f"![Posterior model fits]({os.path.basename(o)})")
 
         return outs
+
+    
+    # TODO: This overrides the goodness of fit method of pymob.sim.report.Report
+    # once I have a reliable way of broadcasting fixed parameters and can mark parameters
+    # as fixed that do not have batch or zero dimensions, I can remove this method, because
+    # it would then only track fixed parameters
+
+    def free_params(self, exclude_batch_dims=True, exclude_deterministic=True):
+        _params = []
+        for k, v in self.config.model_parameters.all.items():
+            if self.config.simulation.batch_dimension in v.dims and exclude_batch_dims:
+                continue
+            if v.prior is not None:
+                if v.prior.distribution == "deterministic" and exclude_deterministic:
+                    continue
+                else:
+                    pass
+            else:
+                continue
+            _params.append(k)
+
+        return _params
+
+    def fixed_params(self, exclude_batch_dims=True, include_deterministic=True):
+        _params = []
+        for k, v in self.config.model_parameters.all.items():
+            if self.config.simulation.batch_dimension in v.dims and exclude_batch_dims:
+                continue
+            if v.prior is not None:
+                if v.prior.distribution == "deterministic" and include_deterministic:
+                    pass
+                else:
+                    continue
+            else:
+                pass
+            _params.append(k)
+
+        return _params  
+
+    @reporting
+    def goodness_of_fit(self, idata):
+
+
+        _nrmse = _nrmse_from_idata(
+            idata=idata, 
+            data_vars=self.config.data_structure.observed_data_variables, 
+            use_predictions=self.rc.goodness_of_fit_use_predictions,
+            obs_transform_funcs=self.obs_transform_funcs,
+            nrmse_mode=self.rc.goodness_of_fit_nrmse_mode,
+        )
+        
+        _loglik = _loglik_from_idata(
+            idata=idata, 
+            data_vars=self.config.data_structure.observed_data_variables, 
+        )
+
+        _bic = _bic_from_idata(
+            idata=idata,
+            free_params=self.free_params(exclude_batch_dims=True, exclude_deterministic=True),
+            data_vars=self.config.data_structure.observed_data_variables, 
+        )
+
+        df = pd.concat([_nrmse.T, _loglik.T, _bic.T])
+        out = f"{self.config.case_study.output_path}/goodness_of_fit.csv"
+        df.to_csv(out)
+
+        self._write(df.to_markdown())
+        return out
+
+
+    @reporting
+    def parameters(self, model_parameters):
+        self._write("### $x_{in}$")
+        if "x_in" in model_parameters:
+            if self.rc.parameters_format == "xarray":
+                self._write(model_parameters["x_in"]._repr_html_())
+            elif self.rc.parameters_format == "pandas":
+                self._write(model_parameters["x_in"].to_pandas().to_markdown())
+        else:
+            self._write("No model input")
+
+        
+        self._write("### $y_0$")
+        if "y0" in model_parameters:
+            if self.rc.parameters_format == "xarray":
+                self._write(model_parameters["y0"]._repr_html_())
+            elif self.rc.parameters_format == "pandas":
+                self._write(model_parameters["y0"].to_pandas().to_markdown())
+        else:
+            self._write("No starting values")
+
+
+        self._write("### Free parameters", newlines=2)
+        for key in self.free_params(exclude_batch_dims=True, exclude_deterministic=True):
+            param = self.config.model_parameters[key]
+            prior = param.prior.model_ser()
+            dims = param.dims
+            self._write(
+                "+ {key} $\sim$ {prior}".format(
+                    key=key, prior=prior
+                ).replace(")", ",dims={dims})".format(dims=dims)), 
+                newlines=0
+            )
+        
+        self._write("\n\n### Fixed parameters", newlines=2)
+        for key in self.fixed_params(exclude_batch_dims=False, include_deterministic=True):
+            param = self.config.model_parameters[key]
+            if param.prior is not None:
+                value = param.prior.parameters["value"]
+            else:
+                value = param.value
+            self._write(
+                "+ {key} $=$ {value}, dims={dims}".format(
+                    key=key, 
+                    value=value,
+                    dims=param.dims
+                ), 
+                newlines=0
+            )
+
+        self._write("")
