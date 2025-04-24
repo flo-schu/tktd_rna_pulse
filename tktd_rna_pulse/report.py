@@ -184,7 +184,12 @@ class MolecularTKTDReport(Report):
     def visualizations(self, sim):
         _, outs = pretty_posterior_plot_multisubstance(sim, save=True, show=False)
         for o in outs:
-            self._write(f"![Posterior model fits]({os.path.basename(o)})")
+            self._write(
+                "![Posterior model fits \label{{{label}}}]({file})".format(
+                    label=self._label.format(placeholder="fig-report:posterior-model-fits"),
+                    file=os.path.basename(o)
+                )
+            )
 
         return outs
 

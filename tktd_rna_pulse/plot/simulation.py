@@ -81,7 +81,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
         }
 
         limits = {
-            "nrf2": {"diuron": 3, "diclofenac": 5, "naproxen": 5},
+            "nrf2": {"diuron": 5, "diclofenac": 5, "naproxen": 5},
         }
 
         post_pred = sim.inferer.posterior_predictions(
