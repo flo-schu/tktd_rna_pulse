@@ -97,7 +97,7 @@ jobs:
 
     - name: Download dataset
       run: |
-        git config --global user.name "tktd_rna_pulse"
+        git config --global user.name "github-workflow-user"
         git config --global user.email "tktd_rna_pulse@github.com"
         datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
 
@@ -176,8 +176,9 @@ jobs:
 
     - name: Download dataset
       run: |
+        git config --global user.name "github-workflow-user"
+        git config --global user.email "tktd_rna_pulse@github.com"
         datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
-        cd data && git annex get  
 
     - name: Test notebooks
       run: | 
