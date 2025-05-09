@@ -65,14 +65,16 @@ jobs:
 
 
   test:
-    name: 🛠️ Test package
+    name: 🧪 Unit testing
+    needs: determine_skip
+
     if: ${{ github.env.skip != 'true' }}
 
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11"]
+        python-version: ["3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -88,8 +90,16 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install flake8 pytest datalad
         pip install -e .
+
+    - uses: jstritch/setup-git-annex@v1
+
+    - name: Download dataset
+      run: |
+        git config --global user.name "github-workflow-user"
+        git config --global user.email "tktd_rna_pulse@github.com"
+        datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
 
     - name: Lint with flake8
       run: |
@@ -159,13 +169,22 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
-        pip install -e .
-        pip install nbconvert
+        pip install nbconvert datalad
+        pip install -e .[dev]
+    
+    - uses: jstritch/setup-git-annex@v1
+
+    - name: Download dataset
+      run: |
+        git config --global user.name "github-workflow-user"
+        git config --global user.email "tktd_rna_pulse@github.com"
+        datalad install --get-data --branch master -s https://gin.g-node.org/flo-schu/tktd_nrf2_zfe__data data
 
     - name: Test notebooks
       run: | 
-        jupyter nbconvert --to markdown --execute scripts/*.ipynb
+        cd scripts
+        jupyter nbconvert --to markdown --execute *.ipynb
+        cd ..
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4

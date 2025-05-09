@@ -47,6 +47,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
     obs_raw.survival.values = (obs_raw.survival / obs_raw.nzfe).values
 
     figs = []
+    outs = []
     for s in substances:
         susbtance_mask = sim.observations.substance == s
         obs = obs_raw.where(susbtance_mask, drop=True)
@@ -80,7 +81,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
         }
 
         limits = {
-            "nrf2": {"diuron": 3, "diclofenac": 5, "naproxen": 5},
+            "nrf2": {"diuron": 5, "diclofenac": 5, "naproxen": 5},
         }
 
         post_pred = sim.inferer.posterior_predictions(
@@ -93,7 +94,8 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
         cmax = float(cext0.max())
         cmin = float(cext0.min())
         # minmax_scaler = lambda x: (x - cmin) / (cmax - cmin)
-        minmax_scaler = mpl.colors.TwoSlopeNorm(vmin=cmin, vcenter=midpoint, vmax=cmax)
+        cmid = min(midpoint, cmax/2)
+        minmax_scaler = mpl.colors.TwoSlopeNorm(vmin=cmin, vcenter=cmid, vmax=cmax)
         
         for bi, bin in enumerate(bins):
             print(f"PRETTY PLOT: make predictions for {s.capitalize()} in bin ({bi+1}/{len(bins)})")
@@ -176,7 +178,10 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
 
         figs.append(fig)
         if save:
-            fig.savefig(f"{sim.output_path}/combined_pps_figure_{s}.png")
+            out = f"{sim.output_path}/combined_pps_figure_{s}.png"
+            fig.savefig(out)
+            outs.append(out)
+
 
         if show:
             plt.show()
@@ -185,7 +190,7 @@ def pretty_posterior_plot_multisubstance(sim, save=True, show=False):
 
     sim.coordinates["time"] = old_time
 
-    return figs
+    return figs, outs
 
 
 def plot_experiments(self, plot_individual=True):

@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-source activate pymob
+source activate molecular-tktd
 pytest -m "not slow"
