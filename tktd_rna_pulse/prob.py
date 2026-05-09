@@ -1,6 +1,7 @@
 import numpyro
 from numpyro import distributions as dist
 from pymob.inference.numpyro_dist_map import LogNormalTrans
+from pymob.inference.numpyro_backend import NumpyroBackend
 import jax
 import jax.numpy as jnp
 
@@ -437,7 +438,7 @@ def model_rna_pulse_3_6d_substance_independent_rna_protein_module(solver, obs, m
     numpyro.sample("nrf2_obs", dist.LogNormal(loc=jnp.log(nrf2), scale=sigma_nrf2_ix_bc).mask(masks["nrf2"]), obs=obs["nrf2"])    
 
 
-from guts_base.prob import conditional_survival_from_hazard
+from mempy.survival_models import conditional_survival_from_hazard
 
 EPS = 9.9e-5
 
@@ -462,14 +463,18 @@ def conditional_survival_error_model(theta, simulation_results, observations, ma
         obs_cint = numpyro.deterministic("cint_res", jnp.log(observations["cint"]+EPS) - jnp.log(simulation_results["cint"]+EPS))
         obs_nrf2 = numpyro.deterministic("nrf2_res", jnp.log(observations["nrf2"]+EPS) - jnp.log(simulation_results["nrf2"]+EPS))
 
-    obs_vars = ["cint", "nrf2", "survival"]
-    n = {k: masks[k].sum() for k in obs_vars}
-    N = sum(n.values())
-    weights = {k: 1/len(obs_vars) for k in obs_vars}
-    scaling_factors = {k: 1/n[k]*N*weights[k] for k in obs_vars}
+    scales = NumpyroBackend.compute_mask_scales(
+        masks=masks,
+        obs_vars=["cint", "nrf2", "survival"],
+    )
+    masks.update(scales)
+    scale_cint = masks.get("_scale_cint")
+    scale_nrf2 = masks.get("_scale_nrf2")
+    scale_surv = masks.get("_scale_survival")
+
 
     # calculate likelihoods
-    with numpyro.handlers.scale(scale=scaling_factors["cint"]):
+    with numpyro.handlers.scale(scale=scale_cint):
         lik_cint = numpyro.sample("cint_obs", dist.Normal(
                 loc=0.0,  # type: ignore
                 scale=theta["sigma_cint"]  # type: ignore
@@ -477,7 +482,7 @@ def conditional_survival_error_model(theta, simulation_results, observations, ma
             obs=obs_cint
         )
     
-    with numpyro.handlers.scale(scale=scaling_factors["nrf2"]):
+    with numpyro.handlers.scale(scale=scale_nrf2):
         lik_nrf2 = numpyro.sample("nrf2_obs", dist.Normal(
                 loc=0.0,  # type: ignore
                 scale=theta["sigma_nrf2"]  # type: ignore
@@ -485,7 +490,7 @@ def conditional_survival_error_model(theta, simulation_results, observations, ma
             obs=obs_nrf2
         )    
     
-    with numpyro.handlers.scale(scale=scaling_factors["survival"]):    
+    with numpyro.handlers.scale(scale=scale_surv):    
         lik_surv = numpyro.sample(
             "survival_obs", dist.Binomial(
                 probs=S_cond_, 
@@ -512,14 +517,17 @@ def conditional_survival_hazard_error_model(theta, simulation_results, observati
         obs_cint = numpyro.deterministic("cint_res", jnp.log(observations["cint"]+EPS) - jnp.log(simulation_results["cint"]+EPS))
         obs_nrf2 = numpyro.deterministic("nrf2_res", jnp.log(observations["nrf2"]+EPS) - jnp.log(simulation_results["nrf2"]+EPS))
 
-    obs_vars = ["cint", "nrf2", "survival"]
-    n = {k: masks[k].sum() for k in obs_vars}
-    N = sum(n.values())
-    weights = {k: 1/len(obs_vars) for k in obs_vars}
-    scaling_factors = {k: 1/n[k]*N*weights[k] for k in obs_vars}
+    scales = NumpyroBackend.compute_mask_scales(
+        masks=masks,
+        obs_vars=["cint", "nrf2", "survival"],
+    )
+    masks.update(scales)
+    scale_cint = masks.get("_scale_cint")
+    scale_nrf2 = masks.get("_scale_nrf2")
+    scale_surv = masks.get("_scale_survival")
 
     # calculate likelihoods
-    with numpyro.handlers.scale(scale=scaling_factors["cint"]):
+    with numpyro.handlers.scale(scale=scale_cint):
         lik_cint = numpyro.sample("cint_obs", dist.Normal(
                 loc=0.0,  # type: ignore
                 scale=theta["sigma_cint"]  # type: ignore
@@ -527,7 +535,7 @@ def conditional_survival_hazard_error_model(theta, simulation_results, observati
             obs=obs_cint
         )
     
-    with numpyro.handlers.scale(scale=scaling_factors["nrf2"]):
+    with numpyro.handlers.scale(scale=scale_nrf2):
         lik_nrf2 = numpyro.sample("nrf2_obs", dist.Normal(
                 loc=0.0,  # type: ignore
                 scale=theta["sigma_nrf2"]  # type: ignore
@@ -535,7 +543,7 @@ def conditional_survival_hazard_error_model(theta, simulation_results, observati
             obs=obs_nrf2
         )    
     
-    with numpyro.handlers.scale(scale=scaling_factors["survival"]):    
+    with numpyro.handlers.scale(scale=scale_surv):    
         lik_surv = numpyro.sample(
             "survival_obs", dist.Binomial(
                 probs=S_conditional, 
@@ -554,14 +562,16 @@ def nrf2_cint_model(theta, simulation_results, observations, masks, indices, onl
         obs_cint = numpyro.deterministic("cint_res", jnp.log(observations["cint"]+EPS) - jnp.log(simulation_results["cint"]+EPS))
         obs_nrf2 = numpyro.deterministic("nrf2_res", jnp.log(observations["nrf2"]+EPS) - jnp.log(simulation_results["nrf2"]+EPS))
 
-    obs_vars = ["cint", "nrf2"]
-    n = {k: masks[k].sum() for k in obs_vars}
-    N = sum(n.values())
-    weights = {k: 1/len(obs_vars) for k in obs_vars}
-    scaling_factors = {k: 1/n[k]*N*weights[k] for k in obs_vars}
+    scales = NumpyroBackend.compute_mask_scales(
+        masks=masks,
+        obs_vars=["cint", "nrf2"],
+    )
+    masks.update(scales)
+    scale_cint = masks.get("_scale_cint")
+    scale_nrf2 = masks.get("_scale_nrf2")
 
     # calculate likelihoods
-    with numpyro.handlers.scale(scale=scaling_factors["cint"]):
+    with numpyro.handlers.scale(scale=scale_cint):
         lik_cint = numpyro.sample("cint_obs", dist.Normal(
                 loc=0.0,  # type: ignore
                 scale=theta["sigma_cint"]  # type: ignore
@@ -569,7 +579,7 @@ def nrf2_cint_model(theta, simulation_results, observations, masks, indices, onl
             obs=obs_cint
         )
     
-    with numpyro.handlers.scale(scale=scaling_factors["nrf2"]):
+    with numpyro.handlers.scale(scale=scale_nrf2):
         lik_nrf2 = numpyro.sample("nrf2_obs", dist.Normal(
                 loc=0.0,  # type: ignore
                 scale=theta["sigma_nrf2"]  # type: ignore

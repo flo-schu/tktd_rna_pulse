@@ -254,7 +254,7 @@ class Simulation(SimulationBase):
     
     def set_y0(self):
         # generate y0
-        y0 = self.observations.isel(time=0).drop("lethality")
+        y0 = self.observations.isel(time=0).drop(["lethality", "survival"])
         y0["cint"].values = np.zeros(shape=y0["cint"].shape)
         y0["cext"] = xr.where(y0["cext"].isnull(), y0["cext_nom"], y0["cext"])
         y0["nrf2"].values = np.zeros(shape=y0["nrf2"].shape)

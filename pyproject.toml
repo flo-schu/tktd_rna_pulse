@@ -12,10 +12,14 @@ description = "Molecular TKTD: TKTD RNA Pulse model"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies=[
-    "pymob[numpyro] >= 0.5.6a6",
-    "guts_base @ git+https://gitlab.uni-osnabrueck.de/fschunck/guts_base.git@0.5.4",
+    # "pymob[numpyro] >= 0.6.5", # vermutlich ab 6.5 möglich, da dort die Mask Scales in der NumpyroBackend.compute_mask_scales() Funktion implementiert wurden
+    # "mempyguts @ git+https://gitlab.uni-osnabrueck.de/memuos/mempyguts.git@1.8.1", # vermutlich ab 1.8.1 möglich, da dort np 2 support implementiert wurde
     "expydb >= 0.5.6",
-    "openpyxl==3.1.2",
+    "openpyxl >= 3.1.3",
+    "toopy >= 0.6.0",
+    "datalad >= 0.23.0",
+    "git-annex >= 10.20260316",
+
 ]
 license = {file = "LICENSE"}
 classifiers = [
