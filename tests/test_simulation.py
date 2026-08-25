@@ -82,4 +82,4 @@ def test_inference(sim, backend):
 
 if __name__ == "__main__":
     # test_simulation(sim=construct_sim("rna_pulse_3_6c_substance_specific", SingleSubstanceSim3))
-    test_inference(sim=construct_sim("rna_pulse_4_substance_specific", SingleSubstanceSim3), backend="numpyro")
+    test_inference(sim=construct_sim("rna_pulse_5_substance_specific", SingleSubstanceSim3), backend="numpyro")
